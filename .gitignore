@@ -1,0 +1,12 @@
+node_modules/
+dist/
+src/frontend/dist/
+.wrangler/
+.dev.vars
+*.local
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
