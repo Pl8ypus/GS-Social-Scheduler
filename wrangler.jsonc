@@ -72,7 +72,7 @@
       ]
     },
     "production": {
-      "name": "pl8ypus-linkedin-scheduler-prod",
+      "name": "gs-social-scheduler",
       "routes": [
         {
           "pattern": "social-scheduler.greg-staunton.com",
