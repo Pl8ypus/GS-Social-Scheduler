@@ -16,3 +16,9 @@ export interface Post {
   error_message: string | null;
   created_at: string;
 }
+
+export function previewContent(content: string, maxLength = 80): string {
+  const trimmed = content.trim();
+  if (trimmed.length <= maxLength) return trimmed;
+  return `${trimmed.slice(0, maxLength)}…`;
+}

@@ -7,16 +7,23 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && wrangler deploy --config src/frontend/dist/pl8ypus_linkedin_scheduler/wrangler.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "deploy": "npm run build && wrangler deploy --config src/frontend/dist/pl8ypus_linkedin_scheduler/wrangler.json --env production",
+    "deploy:staging": "npm run build && wrangler deploy --config src/frontend/dist/pl8ypus_linkedin_scheduler/wrangler.json --env staging",
     "types": "wrangler types",
-    "db:migrate:local": "wrangler d1 migrations apply pl8ypus-scheduler-db --local",
-    "db:migrate:remote": "wrangler d1 migrations apply pl8ypus-scheduler-db --remote"
+    "db:migrate:local": "wrangler d1 migrations apply pl8ypus-scheduler-db-dev --local",
+    "db:migrate:staging": "wrangler d1 migrations apply pl8ypus-scheduler-db-staging --remote --env staging",
+    "db:migrate:production": "wrangler d1 migrations apply pl8ypus-scheduler-db-prod --remote --env production"
   },
   "dependencies": {
-    "hono": "^4.12.31"
+    "hono": "^4.12.31",
+    "jose": "^6.2.3",
+    "react-router-dom": "^7.18.1"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.45.1",
+    "@cloudflare/vitest-pool-workers": "^0.8.55",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
@@ -24,6 +31,7 @@
     "react-dom": "^19.2.8",
     "typescript": "^7.0.2",
     "vite": "^8.1.5",
+    "vitest": "~3.2.4",
     "wrangler": "^4.112.0"
   }
 }

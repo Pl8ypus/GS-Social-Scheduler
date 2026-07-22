@@ -3,7 +3,12 @@ dist/
 src/frontend/dist/
 .wrangler/
 .dev.vars
+.env
+.env.local
 *.local
+
+# D1 backup exports (see RUNBOOK.md)
+backups/
 
 # OS / IDE
 .DS_Store

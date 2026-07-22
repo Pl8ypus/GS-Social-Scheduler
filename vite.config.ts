@@ -11,6 +11,7 @@ export default defineConfig({
     react(),
     cloudflare({
       configPath: path.resolve(__dirname, "wrangler.jsonc"),
+      persistState: { path: path.resolve(__dirname, ".wrangler/state") },
     }),
   ],
   root: path.resolve(__dirname, "src/frontend"),

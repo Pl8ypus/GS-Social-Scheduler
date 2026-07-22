@@ -7,7 +7,12 @@ Personal app to schedule posts to a LinkedIn profile. Runs on Cloudflare Workers
 - **Runtime:** Cloudflare Workers
 - **API:** Hono
 - **Frontend:** React + Vite (`@cloudflare/vite-plugin`)
-- **Database:** Cloudflare D1 (SQL migrations)
+- **Database:** Cloudflare D1 (versioned SQL migrations)
+- **Tests:** Vitest + `@cloudflare/vitest-pool-workers`
+
+See [BUILD_LOG.md](BUILD_LOG.md) for the full evidence trail.
+
+**Operations:** [RUNBOOK.md](RUNBOOK.md) — D1 backup/restore, deploy, rollback, secrets.
 
 ## Prerequisites
 
@@ -15,103 +20,100 @@ Personal app to schedule posts to a LinkedIn profile. Runs on Cloudflare Workers
 - A [Cloudflare account](https://dash.cloudflare.com/)
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (included as a dev dependency)
 
-## Getting started
+## Environments
 
-### 1. Install dependencies
+| Environment | Worker | D1 database | Deploy |
+|-------------|--------|-------------|--------|
+| **Dev** (default) | `pl8ypus-linkedin-scheduler-dev` | `pl8ypus-scheduler-db-dev` | local / `npm run dev` |
+| **Staging** | `pl8ypus-linkedin-scheduler-staging` | `pl8ypus-scheduler-db-staging` | `npm run deploy:staging` |
+| **Production** | `pl8ypus-linkedin-scheduler-prod` | `pl8ypus-scheduler-db-prod` | `npm run deploy` |
+
+Create each remote D1 database once:
+
+```bash
+npx wrangler d1 create pl8ypus-scheduler-db-dev
+npx wrangler d1 create pl8ypus-scheduler-db-staging
+npx wrangler d1 create pl8ypus-scheduler-db-prod
+```
+
+Copy each returned `database_id` into the matching block in [`wrangler.jsonc`](wrangler.jsonc).
+
+Apply migrations:
+
+```bash
+npm run db:migrate:local          # dev (local SQLite)
+npm run db:migrate:staging          # staging remote
+npm run db:migrate:production       # production remote
+```
+
+## Getting started (local)
 
 ```bash
 npm install
-```
-
-### 2. Log in to Cloudflare
-
-```bash
-npx wrangler login
-```
-
-### 3. Create the D1 database (first time only)
-
-If `wrangler.jsonc` still has a placeholder `database_id`, create the remote database and copy the ID:
-
-```bash
-npx wrangler d1 create pl8ypus-scheduler-db
-```
-
-Update `database_id` in [`wrangler.jsonc`](wrangler.jsonc) with the UUID from the command output.
-
-### 4. Apply database migrations
-
-Local (for development):
-
-```bash
 npm run db:migrate:local
-```
-
-Remote (before deploy):
-
-```bash
-npm run db:migrate:remote
-```
-
-### 5. Run locally
-
-```bash
 npm run dev
 ```
 
-Open the URL shown in the terminal (typically `http://localhost:5173`).
+Verify: `GET /api/health`, frontend at `/`, tests with `npm test`.
 
-**Verify:**
+## Secrets
 
-- Frontend placeholder loads at `/`
-- Health check: `GET /api/health` → `{ "ok": true, "service": "pl8ypus-linkedin-scheduler" }`
+**Nothing sensitive is committed.** Templates only:
 
-### 6. Build and preview production output
+- [`.dev.vars.example`](.dev.vars.example) → copy to `.dev.vars` for local dev
+- [`.env.example`](.env.example) → reference for future tooling
 
-```bash
-npm run build
-npm run preview
-```
-
-### 7. Deploy
+Future LinkedIn OAuth tokens:
 
 ```bash
-npm run deploy
+# Local
+# .dev.vars
+
+# Remote
+npx wrangler secret put LINKEDIN_CLIENT_ID --env staging
+npx wrangler secret put LINKEDIN_CLIENT_SECRET --env production
 ```
 
-This builds the app and deploys using the generated Worker config at `src/frontend/dist/pl8ypus_linkedin_scheduler/wrangler.json`. Apply remote migrations first if needed:
+## Deploy
 
 ```bash
-npm run db:migrate:remote
+npm run deploy:staging   # staging
+npm run deploy           # production
 ```
+
+Run the matching `db:migrate:*` command before first deploy to each environment.
+
+## Scheduler (mock publish)
+
+Cron runs every 2 minutes. Due posts use a **two-phase claim** (`scheduled` → `publishing` → `posted`) to prevent double-publish on retry. Test locally:
+
+```bash
+curl http://localhost:<port>/__scheduled
+```
+
+## Tests
+
+```bash
+npm test
+```
+
+- Unit: API create/edit/cancel, scheduler idempotency
+- Integration: create → schedule → mock publish end-to-end
 
 ## Project structure
 
 ```
-├── migrations/           # D1 SQL migrations
-├── src/
-│   ├── worker/           # Cloudflare Worker (Hono API)
-│   │   ├── index.ts
-│   │   ├── routes/api/   # API route modules
-│   │   └── types/        # Shared TypeScript types
-│   └── frontend/         # React SPA
-├── wrangler.jsonc        # Worker + D1 + assets config
-└── vite.config.ts
+├── migrations/              # Versioned D1 migrations (0001_, 0002_, …)
+├── src/worker/
+│   ├── services/            # Business logic (posts)
+│   ├── scheduler/           # Cron / mock publish
+│   └── routes/api/          # Hono HTTP layer
+├── src/frontend/
+├── tests/                   # Vitest + Workers pool
+├── BUILD_LOG.md
+└── wrangler.jsonc
 ```
-
-## Environment variables
-
-Copy [`.dev.vars.example`](.dev.vars.example) to `.dev.vars` for local secrets. Never commit `.dev.vars`.
-
-LinkedIn OAuth tokens and similar secrets will be added in a later step.
 
 ## GitHub
 
 Connect this repository to GitHub on your side. Cloudflare Workers Builds can deploy from GitHub once configured in the dashboard.
-
-## Out of scope (this scaffold)
-
-- UI screens (post list, editor, calendar)
-- LinkedIn OAuth / posting API
-- Cron scheduling logic
-- Cloudflare Access / Zero Trust setup
