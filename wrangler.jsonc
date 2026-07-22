@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "pl8ypus-linkedin-scheduler-prod",
+  "name": "gs-social-scheduler",
   "main": "./src/worker/index.ts",
   "compatibility_date": "2026-07-21",
   "observability": {
@@ -39,6 +39,7 @@
   ],
   "assets": {
     "binding": "ASSETS",
+    "directory": "./src/frontend/dist/client",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   }
