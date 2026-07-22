@@ -96,7 +96,7 @@
         {
           "binding": "DB",
           "database_name": "pl8ypus-scheduler-db-prod",
-          "database_id": "00000000-0000-0000-0000-000000000002",
+          "database_id": "3a394d64-61f2-442a-9263-6c9f475def95",
           "migrations_dir": "migrations"
         }
       ]
