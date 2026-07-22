@@ -4,24 +4,19 @@
   "main": "./src/worker/index.ts",
   "compatibility_date": "2026-07-21",
   "vars": {
-    "ENVIRONMENT": "development"
+    "ENVIRONMENT": "test"
   },
   "ratelimits": [
     {
       "name": "API_RATE_LIMITER",
       "namespace_id": "1001",
       "simple": { "limit": 1000, "period": 60 }
-    },
-    {
-      "name": "SCHEDULED_RATE_LIMITER",
-      "namespace_id": "1002",
-      "simple": { "limit": 1000, "period": 60 }
     }
   ],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "pl8ypus-scheduler-db-dev",
+      "database_name": "pl8ypus-scheduler-db-prod",
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "migrations"
     }

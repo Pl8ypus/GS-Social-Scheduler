@@ -18,78 +18,65 @@ See [BUILD_LOG.md](BUILD_LOG.md) for the full evidence trail.
 
 - [Node.js](https://nodejs.org/) 20+
 - A [Cloudflare account](https://dash.cloudflare.com/)
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (included as a dev dependency)
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (included with project tooling)
 
 ## Environments
 
-| Environment | Worker | D1 database | Deploy |
-|-------------|--------|-------------|--------|
-| **Dev** (default) | `pl8ypus-linkedin-scheduler-dev` | `pl8ypus-scheduler-db-dev` | local / `npm run dev` |
-| **Staging** | `pl8ypus-linkedin-scheduler-staging` | `pl8ypus-scheduler-db-staging` | `npm run deploy:staging` |
-| **Production** | `pl8ypus-linkedin-scheduler-prod` | `pl8ypus-scheduler-db-prod` | `npm run deploy` |
+This repository is configured for production only.
 
-Create each remote D1 database once:
+| Worker | D1 database | Deploy |
+|--------|-------------|--------|
+| `pl8ypus-linkedin-scheduler-prod` | `pl8ypus-scheduler-db-prod` | `npm run deploy` |
+
+Create the production D1 database once:
 
 ```bash
-npx wrangler d1 create pl8ypus-scheduler-db-dev
-npx wrangler d1 create pl8ypus-scheduler-db-staging
 npx wrangler d1 create pl8ypus-scheduler-db-prod
 ```
 
-Copy each returned `database_id` into the matching block in [`wrangler.jsonc`](wrangler.jsonc).
+Copy the returned `database_id` into [`wrangler.jsonc`](wrangler.jsonc).
 
 Apply migrations:
 
 ```bash
-npm run db:migrate:local          # dev (local SQLite)
-npm run db:migrate:staging          # staging remote
-npm run db:migrate:production       # production remote
+npm run db:migrate:production
 ```
 
-## Getting started (local)
+## Getting Started
 
 ```bash
 npm install
-npm run db:migrate:local
-npm run dev
+npm test
+npm run build
 ```
 
-Verify: `GET /api/health`, frontend at `/`, tests with `npm test`.
+Verify production after deploy with `GET /api/health`, the frontend at `/`, and `npm test`.
 
 ## Secrets
 
 **Nothing sensitive is committed.** Templates only:
 
-- [`.dev.vars.example`](.dev.vars.example) → copy to `.dev.vars` for local dev
-- [`.env.example`](.env.example) → reference for future tooling
+- [`.env.example`](.env.example) → production secret names
 
 Future LinkedIn OAuth tokens:
 
 ```bash
-# Local
-# .dev.vars
-
-# Remote
-npx wrangler secret put LINKEDIN_CLIENT_ID --env staging
-npx wrangler secret put LINKEDIN_CLIENT_SECRET --env production
+npx wrangler secret put LINKEDIN_CLIENT_ID
+npx wrangler secret put LINKEDIN_CLIENT_SECRET
 ```
 
 ## Deploy
 
 ```bash
-npm run deploy:staging   # staging
-npm run deploy           # production
+npm run db:migrate:production
+npm run deploy
 ```
 
-Run the matching `db:migrate:*` command before first deploy to each environment.
+Run the production migration command before the first deploy and before releases that add migrations.
 
 ## Scheduler (mock publish)
 
-Cron runs every 2 minutes. Due posts use a **two-phase claim** (`scheduled` → `publishing` → `posted`) to prevent double-publish on retry. Test locally:
-
-```bash
-curl http://localhost:<port>/__scheduled
-```
+Cron runs every 2 minutes in production. Due posts use a **two-phase claim** (`scheduled` → `publishing` → `posted`) to prevent double-publish on retry.
 
 ## Tests
 

@@ -35,9 +35,9 @@ export const accessAuth: MiddlewareHandler<{
   Bindings: Env;
   Variables: AccessVariables;
 }> = async (c, next) => {
-  // Local dev / tests run without an Access proxy in front. Fail open ONLY here,
-  // gated on an explicit environment marker so staging/production fail closed.
-  if (c.env.ENVIRONMENT === "development") {
+  // Tests run without an Access proxy in front. Fail open only for that
+  // explicit marker so production fails closed.
+  if (c.env.ENVIRONMENT === "test") {
     return next();
   }
 

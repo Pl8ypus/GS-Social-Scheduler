@@ -4,17 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy": "node -e \"process.env.CLOUDFLARE_ENV='production'; const { spawnSync } = require('node:child_process'); const run = (cmd, args) => { const result = spawnSync(cmd, args, { stdio: 'inherit', shell: true, env: process.env }); if (result.status) process.exit(result.status); }; run('npm', ['run', 'build']); run('wrangler', ['deploy', '--config', 'src/frontend/dist/pl8ypus_linkedin_scheduler_dev/wrangler.json', '--env', 'production']);\"",
-    "deploy:staging": "node -e \"process.env.CLOUDFLARE_ENV='staging'; const { spawnSync } = require('node:child_process'); const run = (cmd, args) => { const result = spawnSync(cmd, args, { stdio: 'inherit', shell: true, env: process.env }); if (result.status) process.exit(result.status); }; run('npm', ['run', 'build']); run('wrangler', ['deploy', '--config', 'src/frontend/dist/pl8ypus_linkedin_scheduler_dev/wrangler.json', '--env', 'staging']);\"",
+    "deploy": "node -e \"process.env.CLOUDFLARE_ENV='production'; const { spawnSync } = require('node:child_process'); const run = (cmd, args) => { const result = spawnSync(cmd, args, { stdio: 'inherit', shell: true, env: process.env }); if (result.status) process.exit(result.status); }; run('npm', ['run', 'build']); run('wrangler', ['deploy', '--config', 'src/frontend/dist/pl8ypus_linkedin_scheduler_prod/wrangler.json']);\"",
     "types": "wrangler types",
-    "db:migrate:local": "wrangler d1 migrations apply pl8ypus-scheduler-db-dev --local",
-    "db:migrate:staging": "wrangler d1 migrations apply pl8ypus-scheduler-db-staging --remote --env staging",
-    "db:migrate:production": "wrangler d1 migrations apply pl8ypus-scheduler-db-prod --remote --env production"
+    "db:migrate:production": "wrangler d1 migrations apply pl8ypus-scheduler-db-prod --remote"
   },
   "dependencies": {
     "hono": "^4.12.31",

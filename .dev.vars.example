@@ -1,6 +1,0 @@
-# Copy to `.dev.vars` for local Wrangler/Vite development (never commit `.dev.vars`)
-
-# LinkedIn OAuth / API (future step — not used yet)
-# LINKEDIN_CLIENT_ID=
-# LINKEDIN_CLIENT_SECRET=
-# LINKEDIN_ACCESS_TOKEN=

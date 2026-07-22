@@ -2,7 +2,6 @@ node_modules/
 dist/
 src/frontend/dist/
 .wrangler/
-.dev.vars
 .env
 .env.local
 *.local

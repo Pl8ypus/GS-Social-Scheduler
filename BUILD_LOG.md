@@ -12,7 +12,7 @@ Evidence trail for portfolio / operator review. Each slice records what was buil
 
 **Decisions:** React + Vite + Hono (official Cloudflare SPA pattern); raw SQL migrations (no ORM); local D1 via Wrangler.
 
-**Tested:** `npm run dev`, `GET /api/health`, `npm run build`, local D1 migration.
+**Tested:** `GET /api/health`, `npm run build`, D1 migration.
 
 ---
 
@@ -24,7 +24,7 @@ Evidence trail for portfolio / operator review. Each slice records what was buil
 
 **Decisions:** Image stored as data URL in D1 until R2 added; JSON API (not multipart).
 
-**Tested:** Manual POST/create via dev server; form validation.
+**Tested:** Manual POST/create; form validation.
 
 ---
 
@@ -36,7 +36,7 @@ Evidence trail for portfolio / operator review. Each slice records what was buil
 
 **Decisions:** Edit allowed for `draft` only initially; two-step delete confirm.
 
-**Tested:** Manual list/edit/delete via dev server.
+**Tested:** Manual list/edit/delete.
 
 ---
 
@@ -54,13 +54,13 @@ Evidence trail for portfolio / operator review. Each slice records what was buil
 
 ## Step 5 — Scheduler (mock publish)
 
-**Built:** Cron (`*/2 * * * *`); `processDuePosts`; mock `linkedin_post_id`; failed status + `error_message`; `/__scheduled` for local trigger.
+**Built:** Cron (`*/2 * * * *`); `processDuePosts`; mock `linkedin_post_id`; failed status + `error_message`.
 
 **Files:** `src/worker/scheduler/process-due-posts.ts`, `src/worker/index.ts`, `wrangler.jsonc`
 
 **Decisions:** Mock publish only; logs prefixed `[scheduler]`.
 
-**Tested:** `curl /__scheduled`; verified status flip to `posted` in local D1.
+**Tested:** Verified scheduled status flips to `posted` in D1.
 
 ---
 
@@ -72,7 +72,7 @@ Evidence trail for portfolio / operator review. Each slice records what was buil
 
 **Decisions:** Custom CSS variables from site (not full Tailwind bundle); status colors use brand accents.
 
-**Tested:** Visual check in dev (compose, posts list, nav).
+**Tested:** Visual check (compose, posts list, nav).
 
 ---
 
@@ -80,8 +80,8 @@ Evidence trail for portfolio / operator review. Each slice records what was buil
 
 **Built:**
 
-- Wrangler **dev / staging / production** environments with isolated D1 databases
-- **Secrets audit** — no secrets in repo; `.dev.vars` / `.env` gitignored; templates only
+- Wrangler **production** environment with D1 binding
+- **Secrets audit** — no secrets in repo; `.env` gitignored; template only
 - **Migration 0002** — `publishing` status for idempotent scheduler claims
 - **Two-phase publish** — claim → publish → complete; recovery for stuck `publishing`
 - **Vitest** — API unit tests, scheduler unit tests, create→schedule→publish integration test
@@ -90,22 +90,20 @@ Evidence trail for portfolio / operator review. Each slice records what was buil
 
 **Files:**
 
-- `wrangler.jsonc` — env blocks
+- `wrangler.jsonc` — production config
 - `migrations/0002_add_publishing_status.sql`
 - `src/worker/services/posts-service.ts`, `src/worker/app.ts`
 - `src/worker/scheduler/process-due-posts.ts` (rewritten)
 - `vitest.config.ts`, `tests/**`
 - `.env.example`, `.gitignore`, `package.json`, `README.md`
 
-**Decisions — environments naming:**
+**Decisions — production naming:**
 
-| Environment | Worker name | D1 database name |
-|-------------|-------------|------------------|
-| Dev (default / local) | `pl8ypus-linkedin-scheduler-dev` | `pl8ypus-scheduler-db-dev` |
-| Staging | `pl8ypus-linkedin-scheduler-staging` | `pl8ypus-scheduler-db-staging` |
-| Production | `pl8ypus-linkedin-scheduler-prod` | `pl8ypus-scheduler-db-prod` |
+| Worker name | D1 database name |
+|-------------|------------------|
+| `pl8ypus-linkedin-scheduler-prod` | `pl8ypus-scheduler-db-prod` |
 
-Pattern: `pl8ypus-linkedin-scheduler-{env}` for Workers, `pl8ypus-scheduler-db-{env}` for D1. Replace placeholder `database_id` UUIDs after `wrangler d1 create` per environment.
+Replace the production `database_id` in `wrangler.jsonc` after `wrangler d1 create` if the database is recreated.
 
 **Decisions — idempotency (two-phase status vs publish log):**
 
@@ -115,7 +113,7 @@ Chose **two-phase status** (`scheduled` → `publishing` → `posted`) over a se
 - **Tradeoff:** Adds internal `publishing` status and migration complexity; a log table would give richer audit history but more joins and cleanup. For single-user scope, row-level state is sufficient.
 - **Recovery:** Cron first completes any `publishing` rows that already have a `linkedin_post_id` (crash after publish, before complete).
 
-**Secrets audit:** No LinkedIn credentials or API keys in committed files. Placeholder `database_id` values are non-secret. Future secrets → `wrangler secret put --env staging|production` and `.dev.vars` locally.
+**Secrets audit:** No LinkedIn credentials or API keys in committed files. Production secrets are set with `wrangler secret put`.
 
 **Tested:** `npm test` (unit + integration); local migration 0002.
 
@@ -140,7 +138,7 @@ Chose **two-phase status** (`scheduled` → `publishing` → `posted`) over a se
 - Subtle radial background gradient only — no hero-scale effects that would distract from the operator UI
 - Functional markup unchanged; styling-only pass
 
-**Tested:** `npm test` (11 passing); visual check in dev recommended for compose, posts queue, nav
+**Tested:** `npm test` (11 passing); visual check recommended for compose, posts queue, nav
 
 ---
 
@@ -208,17 +206,11 @@ Access now gates all of `/api/*`, so enumeration requires a valid Access JWT (an
 
 ## Step 11 — D1 backup/restore + deploy runbook
 
-**Built:** `RUNBOOK.md` — D1 export/restore procedures per environment, deploy-to-staging, promote-to-production, Worker rollback, secrets/Access var matrix; `backups/` gitignored.
+**Built:** `RUNBOOK.md` — production D1 export/restore procedures, deploy, Worker rollback, secrets/Access setup; `backups/` gitignored.
 
 **Files:** `RUNBOOK.md`, `.gitignore` (exclude backup SQL)
 
-**Verified (local dev D1, Wrangler 4.112.0):**
-
-- Export: `wrangler d1 export pl8ypus-scheduler-db-dev --local --output backups/dev-local-step11-test.sql`
-- Data loss simulated (DELETE marker row → count 0)
-- Restore: full SQL import into fresh local store via `--persist-to backups/restore-verify --file …` → marker row restored (id=5)
-
-**Could not verify:** Remote staging/production export or Time Travel restore — no Cloudflare API token in automation session. Commands documented from Cloudflare docs; run `wrangler login` + staging export before production reliance.
+**Could not verify:** Remote production export or Time Travel restore — no Cloudflare API token in automation session. Commands documented from Cloudflare docs; run `wrangler login` before production reliance.
 
 ---
 

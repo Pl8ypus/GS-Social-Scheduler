@@ -2,9 +2,8 @@ import type { Env as GeneratedEnv } from "../../worker-configuration";
 
 export interface Env extends GeneratedEnv {
   /**
-   * Deployment environment. `"development"` bypasses Cloudflare Access
-   * verification for local `wrangler dev` / tests (there is no Access proxy in
-   * front locally). Any other value (or unset) is treated as production and
+   * Deployment environment. `"test"` bypasses Cloudflare Access verification
+   * for Vitest only. Any other value (or unset) is treated as production and
    * fails closed.
    */
   ENVIRONMENT?: string;
@@ -14,6 +13,4 @@ export interface Env extends GeneratedEnv {
   CF_ACCESS_AUD?: string;
   /** Rate limiter for the `/api/*` surface. */
   API_RATE_LIMITER: RateLimit;
-  /** Rate limiter for the `/__scheduled` manual trigger (non-prod only). */
-  SCHEDULED_RATE_LIMITER: RateLimit;
 }
