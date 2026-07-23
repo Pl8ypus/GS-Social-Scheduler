@@ -1,85 +1,103 @@
 /*
- * Design tokens extracted from https://pl8ypus.io/css/site.css
- * and verified against live markup (header, buttons, cards, status pills).
- *
- * Site palette names: void, panel, line, signal, muted, neon, cyan, amber, violet
+ * Design tokens aligned with GS-Client-Portal (portal.css).
+ * Scheduler-specific status tokens map to the portal status palette.
  */
 
 :root {
-  /* Surfaces — void #080808, panel #111111 */
-  --pl8-void: #080808;
-  --pl8-panel: #111111;
-  --pl8-bg: var(--pl8-void);
-  --pl8-surface: var(--pl8-panel);
-  --pl8-surface-elevated: #0f0f0f;
-  --pl8-surface-hover: rgba(255, 255, 255, 0.04);
+  /* Brand palette */
+  --color-primary: #0d6e6e;
+  --color-primary-dark: #0a5757;
+  --color-primary-light: #e6f4f4;
+  --color-accent: #4caf7d;
+  --color-accent-dark: #3d9468;
+  --color-accent-light: #edf7f2;
 
-  /* Borders — line #1f1f1f; zinc scale from site.css */
-  --pl8-line: #1f1f1f;
-  --pl8-border: #27272a;
-  --pl8-border-strong: #3f3f46;
-  --pl8-border-soft: rgba(255, 255, 255, 0.06);
-  --pl8-border-muted: rgba(63, 63, 70, 0.6);
+  /* Neutrals */
+  --color-bg: #f0f5f4;
+  --color-surface: #ffffff;
+  --color-border: #d5e3e1;
+  --color-border-light: #eaf0ef;
 
-  /* Text — signal #f0f0ec; muted #6e7c8c; zinc scale */
-  --pl8-signal: #f0f0ec;
-  --pl8-text: #ffffff;
-  --pl8-text-secondary: #a1a1aa;
-  --pl8-text-muted: #71717a;
-  --pl8-text-subtle: #52525b;
-  --pl8-text-placeholder: #6e7c8c;
-  --pl8-text-inverse: #18181b;
+  /* Text */
+  --color-text: #1a2e2e;
+  --color-text-muted: #5a7a78;
+  --color-text-light: #8aa8a6;
 
-  /* Brand accents */
-  --pl8-neon: #c5d8ef;
-  --pl8-cyan: #4a7fc1;
-  --pl8-amber: #b8955a;
-  --pl8-violet: #8b88b8;
-  --pl8-emerald: #6ee7b7;
+  /* Portal status colours */
+  --color-status-open: #f59e0b;
+  --color-status-progress: #3b82f6;
+  --color-status-completed: #4caf7d;
+  --color-status-bg-open: #fffbeb;
+  --color-status-bg-progress: #eff6ff;
+  --color-status-bg-completed: #edf7f2;
 
-  /* Status badges — mapped to site accent opacity pattern (/10 bg, /30 border) */
-  --pl8-status-draft-fg: #a1a1aa;
-  --pl8-status-draft-border: #3f3f46;
-  --pl8-status-draft-bg: transparent;
+  /* Priority / error */
+  --color-priority-high: #ef4444;
+  --color-priority-medium: #f59e0b;
+  --color-priority-low: #6b7280;
+  --color-status-bg-error: #fef2f2;
 
-  --pl8-status-scheduled-fg: var(--pl8-cyan);
-  --pl8-status-scheduled-border: rgba(74, 127, 193, 0.3);
-  --pl8-status-scheduled-bg: rgba(74, 127, 193, 0.1);
+  /* Scheduler status mapping */
+  --status-draft-fg: var(--color-priority-low);
+  --status-draft-bg: #f9fafb;
+  --status-draft-border: var(--color-border);
 
-  --pl8-status-publishing-fg: var(--pl8-amber);
-  --pl8-status-publishing-border: rgba(184, 149, 90, 0.3);
-  --pl8-status-publishing-bg: rgba(184, 149, 90, 0.1);
+  --status-scheduled-fg: #b45309;
+  --status-scheduled-bg: var(--color-status-bg-open);
+  --status-scheduled-border: #fcd34d;
 
-  --pl8-status-posted-fg: var(--pl8-emerald);
-  --pl8-status-posted-border: rgba(52, 211, 153, 0.3);
-  --pl8-status-posted-bg: rgba(52, 211, 153, 0.1);
+  --status-publishing-fg: #1d4ed8;
+  --status-publishing-bg: var(--color-status-bg-progress);
+  --status-publishing-border: #93c5fd;
 
-  --pl8-status-failed-fg: #fecaca;
-  --pl8-status-failed-border: rgba(248, 113, 113, 0.4);
-  --pl8-status-failed-bg: rgba(127, 29, 29, 0.2);
+  --status-posted-fg: #166534;
+  --status-posted-bg: var(--color-status-bg-completed);
+  --status-posted-border: #86efac;
 
-  /* Typography — matches site.css font-family stack */
-  --pl8-font: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --pl8-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
+  --status-failed-fg: #dc2626;
+  --status-failed-bg: var(--color-status-bg-error);
+  --status-failed-border: #fca5a5;
 
-  /* Spacing & radius — rounded-xl cards, rounded-full pills/buttons */
-  --pl8-radius-sm: 0.5rem;
-  --pl8-radius-md: 0.75rem;
-  --pl8-radius-lg: 1rem;
-  --pl8-radius-pill: 9999px;
+  /* Typography */
+  --font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
 
-  /* Layout — max-w-6xl = 72rem */
-  --pl8-max-width: 72rem;
-  --pl8-nav-height: 4.5rem;
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
 
-  /* Shadows — from site.css shadow-neon / shadow-cyan pattern */
-  --pl8-shadow-card: 0 0 0 1px rgba(197, 216, 239, 0.08),
-    0 2px 8px rgba(0, 0, 0, 0.5);
-  --pl8-shadow-dropdown: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  /* Layout */
+  --content-max: 1100px;
+  --nav-height: 60px;
 
-  /* Focus ring — focus:ring-neon/20 from site.css */
-  --pl8-focus-ring: rgba(197, 216, 239, 0.2);
+  /* Radii */
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(13, 110, 110, 0.08);
+  --shadow: 0 2px 8px rgba(13, 110, 110, 0.1);
+  --shadow-lg: 0 4px 20px rgba(13, 110, 110, 0.12);
+
+  /* Transitions */
+  --transition: 160ms ease;
+
+  /* Focus */
+  --focus-ring: rgba(13, 110, 110, 0.12);
 }

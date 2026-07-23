@@ -6,7 +6,10 @@ import {
   startSchedulerRun,
 } from "../services/reporting-service";
 
-export type PublishExecutor = (linkedinPostId: string, post: Post) => Promise<void>;
+export type PublishExecutor = (
+  linkedinPostId: string,
+  post: Post,
+) => Promise<string | void>;
 
 /**
  * How long a `publishing` claim is considered live. A row still `publishing`
@@ -24,9 +27,13 @@ type RunContext = {
   runId: number;
 };
 
-const defaultPublishExecutor: PublishExecutor = async () => {
-  /* mock publish — real LinkedIn API call goes here later */
+const defaultPublishExecutor: PublishExecutor = async (_claimId, post) => {
+  return buildMockLinkedinPostId(post.id);
 };
+
+export function buildPublishClaimId(postId: number): string {
+  return `claim-${postId}-${crypto.randomUUID()}`;
+}
 
 export function buildMockLinkedinPostId(postId: number): string {
   return `mock-${postId}-${crypto.randomUUID()}`;
@@ -178,18 +185,18 @@ export async function recoverPublishingPosts(
 
     const linkedinPostId = post.linkedin_post_id!;
     try {
-      await publish(linkedinPostId, post);
-      const completed = await completePublish(db, post.id, linkedinPostId);
+      const publishedId = (await publish(linkedinPostId, post)) ?? linkedinPostId;
+      const completed = await completePublish(db, post.id, publishedId);
       if (completed) {
         recovered += 1;
         await logPublishEvent(db, {
           postId: post.id,
           result: "success",
-          linkedinPostId,
+          linkedinPostId: publishedId,
           schedulerRunId: run?.runId,
         });
         console.log(
-          `[scheduler] Recovered post id=${post.id} linkedin_post_id=${linkedinPostId}`,
+          `[scheduler] Recovered post id=${post.id} linkedin_post_id=${publishedId}`,
         );
       }
     } catch (error) {
@@ -213,7 +220,7 @@ export async function publishDuePost(
   db: D1Database,
   post: Post,
   publish: PublishExecutor = defaultPublishExecutor,
-  linkedinPostId = buildMockLinkedinPostId(post.id),
+  linkedinPostId = buildPublishClaimId(post.id),
   run?: RunContext,
 ): Promise<string> {
   const claimed = await claimPostForPublish(db, post, linkedinPostId);
@@ -222,7 +229,7 @@ export async function publishDuePost(
   }
 
   try {
-    await publish(linkedinPostId, post);
+    linkedinPostId = (await publish(linkedinPostId, post)) ?? linkedinPostId;
   } catch (error) {
     const errorDetail = formatErrorDetail(error);
     console.error(`[scheduler] Publish failed post id=${post.id}:`, error);

@@ -20,7 +20,9 @@
   "vars": {
     "ENVIRONMENT": "production",
     "CF_ACCESS_TEAM_DOMAIN": "",
-    "CF_ACCESS_AUD": ""
+    "CF_ACCESS_AUD": "",
+    "LINKEDIN_REDIRECT_URI": "https://social-scheduler.greg-staunton.com/api/admin/linkedin/callback",
+    "LINKEDIN_API_VERSION": "202506"
   },
   "ratelimits": [
     {

@@ -239,11 +239,11 @@ export default function Posts() {
                       <StatusBadge status={post.status} />
                     </td>
                     <td className="date-cell">{formatScheduledAt(post.scheduled_at)}</td>
-                    <td className="date-cell">{post.created_at}</td>
+                    <td className="date-cell">{formatScheduledAt(post.created_at)}</td>
                     <td>
                       <div className="actions-cell">
                         {(post.status === "draft" || post.status === "scheduled") && (
-                          <Link to={`/posts/${post.id}/edit`} className="btn btn-ghost">
+                          <Link to={`/posts/${post.id}/edit`} className="btn btn--ghost btn--sm">
                             Edit
                           </Link>
                         )}
@@ -252,7 +252,7 @@ export default function Posts() {
                             <span>Cancel schedule?</span>
                             <button
                               type="button"
-                              className="btn btn-secondary"
+                              className="btn btn--ghost btn--sm"
                               onClick={() => void handleConfirmCancel(post.id)}
                               disabled={cancellingId === post.id}
                             >
@@ -260,7 +260,7 @@ export default function Posts() {
                             </button>
                             <button
                               type="button"
-                              className="btn btn-ghost"
+                              className="btn btn--ghost btn--sm"
                               onClick={() => setConfirmCancelId(null)}
                               disabled={cancellingId === post.id}
                             >
@@ -270,7 +270,7 @@ export default function Posts() {
                         ) : post.status === "scheduled" ? (
                           <button
                             type="button"
-                            className="btn btn-ghost"
+                            className="btn btn--ghost btn--sm"
                             onClick={() => setConfirmCancelId(post.id)}
                           >
                             Cancel schedule
@@ -281,7 +281,7 @@ export default function Posts() {
                             <span>Delete this post?</span>
                             <button
                               type="button"
-                              className="btn btn-danger"
+                              className="btn btn--danger btn--sm"
                               onClick={() => void handleConfirmDelete(post.id)}
                               disabled={deletingId === post.id}
                             >
@@ -289,7 +289,7 @@ export default function Posts() {
                             </button>
                             <button
                               type="button"
-                              className="btn btn-ghost"
+                              className="btn btn--ghost btn--sm"
                               onClick={() => setConfirmDeleteId(null)}
                               disabled={deletingId === post.id}
                             >
@@ -299,7 +299,7 @@ export default function Posts() {
                         ) : (
                           <button
                             type="button"
-                            className="btn btn-ghost"
+                            className="btn btn--ghost btn--sm"
                             onClick={() => setConfirmDeleteId(post.id)}
                           >
                             Delete
@@ -338,7 +338,7 @@ export default function Posts() {
                       <td>
                         <button
                           type="button"
-                          className="btn btn-ghost"
+                          className="btn btn--ghost btn--sm"
                           onClick={() => void handleRestore(post.id)}
                           disabled={restoringId === post.id}
                         >

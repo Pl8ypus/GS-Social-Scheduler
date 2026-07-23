@@ -58,7 +58,12 @@ Verify production after deploy with `GET /api/health`, the frontend at `/`, and 
 
 - [`.env.example`](.env.example) → production secret names
 
-Future LinkedIn OAuth tokens:
+LinkedIn app setup:
+
+- Developer portal: <https://www.linkedin.com/developers/>
+- Product/API: Share on LinkedIn / Community Management API
+- OAuth callback URL: `https://social-scheduler.greg-staunton.com/api/admin/linkedin/callback`
+- Scopes: `openid`, `profile`, `w_member_social`
 
 ```bash
 npx wrangler secret put LINKEDIN_CLIENT_ID
@@ -74,9 +79,9 @@ npm run deploy
 
 Run the production migration command before the first deploy and before releases that add migrations.
 
-## Scheduler (mock publish)
+## Scheduler
 
-Cron runs every 2 minutes in production. Due posts use a **two-phase claim** (`scheduled` → `publishing` → `posted`) to prevent double-publish on retry.
+Cron runs every 2 minutes in production. Due posts use a **two-phase claim** (`scheduled` → `publishing` → `posted`) and publish through LinkedIn once the admin OAuth connection is complete.
 
 ## Tests
 

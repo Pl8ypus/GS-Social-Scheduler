@@ -64,7 +64,7 @@ export default function EditPost() {
     return (
       <>
         <p className="alert alert-error" role="alert">{error || "Post not found."}</p>
-        <p><Link to="/posts" className="btn btn-secondary">Back to posts</Link></p>
+        <p><Link to="/posts" className="btn btn--ghost">Back to posts</Link></p>
       </>
     );
   }

@@ -152,6 +152,14 @@ npx wrangler secret put LINKEDIN_CLIENT_SECRET
 npx wrangler secret list
 ```
 
+LinkedIn Developer Portal setup:
+
+- Product/API: Share on LinkedIn / Community Management API
+- OAuth callback URL: `https://social-scheduler.greg-staunton.com/api/admin/linkedin/callback`
+- Scopes: `openid`, `profile`, `w_member_social`
+
+After deploy, open `/admin` and click **Connect LinkedIn** to complete OAuth.
+
 `API_RATE_LIMITER` is configured in `wrangler.jsonc`. The namespace ID must exist in your Cloudflare account.
 
 ---

@@ -1,6 +1,7 @@
 import { createApp } from "./app";
 import type { Env } from "./env";
 import { processDuePosts } from "./scheduler/process-due-posts";
+import { publishPostToLinkedIn } from "./services/linkedin-service";
 
 const app = createApp();
 
@@ -17,6 +18,8 @@ export default {
 
   async scheduled(_event, env, _ctx) {
     console.log("[scheduler] Cron triggered");
-    await processDuePosts(env.DB);
+    await processDuePosts(env.DB, (_claimId, post) =>
+      publishPostToLinkedIn(env.DB, env, post),
+    );
   },
 } satisfies ExportedHandler<Env>;

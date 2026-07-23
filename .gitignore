@@ -4,6 +4,7 @@ src/frontend/dist/
 .wrangler/
 .env
 .env.local
+.dev.vars
 *.local
 
 # D1 backup exports (see RUNBOOK.md)

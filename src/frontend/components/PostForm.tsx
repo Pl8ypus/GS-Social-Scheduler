@@ -1,6 +1,8 @@
 import { FormEvent, useState } from "react";
 import {
+  APP_TIME_ZONE_LABEL,
   isoToLocalDateTimeInput,
+  isLocalDateTimeInputInFuture,
   localDateTimeInputToIso,
 } from "../utils/datetime";
 
@@ -81,7 +83,7 @@ export default function PostForm({
     if (scheduleLater) {
       if (!scheduledAtLocal) {
         next.scheduled_at = "Pick a date and time.";
-      } else if (new Date(scheduledAtLocal).getTime() <= Date.now()) {
+      } else if (!isLocalDateTimeInputInFuture(scheduledAtLocal)) {
         next.scheduled_at = "Scheduled time must be in the future.";
       }
     }
@@ -189,7 +191,7 @@ export default function PostForm({
         {scheduleLater && (
           <div className="schedule-fields">
             <label htmlFor="scheduled_at" className="field-label">
-              Scheduled time
+              Scheduled time ({APP_TIME_ZONE_LABEL})
             </label>
             <input
               id="scheduled_at"
@@ -208,7 +210,7 @@ export default function PostForm({
       {successMessage && <p className="alert alert-success" role="status">{successMessage}</p>}
 
       <div className="btn-row">
-        <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+        <button type="submit" className="btn btn--primary" disabled={isSubmitting}>
           {isSubmitting ? "Saving…" : actionLabel}
         </button>
       </div>
