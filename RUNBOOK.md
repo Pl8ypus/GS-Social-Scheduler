@@ -10,7 +10,7 @@ See also: [README.md](README.md) (setup), [BUILD_LOG.md](BUILD_LOG.md) (evidence
 
 | Worker name | D1 database | `ENVIRONMENT` var | Deploy command |
 |-------------|-------------|-------------------|----------------|
-| `pl8ypus-linkedin-scheduler-prod` | `pl8ypus-scheduler-db-prod` | `production` | `npm run deploy` |
+| `gs-social-scheduler` | `pl8ypus-scheduler-db-prod` | `production` | `npm run deploy` |
 
 **Prerequisites for remote operations:**
 
@@ -154,8 +154,8 @@ npx wrangler secret list
 
 LinkedIn Developer Portal setup:
 
-- Product/API: Share on LinkedIn / Community Management API
-- OAuth callback URL: `https://social-scheduler.greg-staunton.com/api/admin/linkedin/callback`
+- Product/API: Share on LinkedIn / Sign In with LinkedIn using OpenID Connect
+- OAuth callback URL: `https://linkedin-scheduler.greg-staunton.com/api/admin/linkedin/callback`
 - Scopes: `openid`, `profile`, `w_member_social`
 
 After deploy, open `/admin` and click **Connect LinkedIn** to complete OAuth.

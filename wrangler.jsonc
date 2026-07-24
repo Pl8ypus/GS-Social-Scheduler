@@ -11,7 +11,7 @@
   },
   "routes": [
     {
-      "pattern": "social-scheduler.greg-staunton.com",
+      "pattern": "linkedin-scheduler.greg-staunton.com",
       "custom_domain": true
     }
   ],

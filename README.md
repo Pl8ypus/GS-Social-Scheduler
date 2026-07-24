@@ -26,7 +26,7 @@ This repository is configured for production only.
 
 | Worker | D1 database | Deploy |
 |--------|-------------|--------|
-| `pl8ypus-linkedin-scheduler-prod` | `pl8ypus-scheduler-db-prod` | `npm run deploy` |
+| `gs-social-scheduler` | `pl8ypus-scheduler-db-prod` | `npm run deploy` |
 
 Create the production D1 database once:
 
@@ -61,8 +61,8 @@ Verify production after deploy with `GET /api/health`, the frontend at `/`, and 
 LinkedIn app setup:
 
 - Developer portal: <https://www.linkedin.com/developers/>
-- Product/API: Share on LinkedIn / Community Management API
-- OAuth callback URL: `https://social-scheduler.greg-staunton.com/api/admin/linkedin/callback`
+- Product/API: Share on LinkedIn / Sign In with LinkedIn using OpenID Connect
+- OAuth callback URL: `https://linkedin-scheduler.greg-staunton.com/api/admin/linkedin/callback`
 - Scopes: `openid`, `profile`, `w_member_social`
 
 ```bash
