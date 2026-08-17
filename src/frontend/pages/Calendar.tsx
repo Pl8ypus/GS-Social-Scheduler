@@ -139,6 +139,7 @@ export default function Calendar() {
           <div>
             <p className="page-eyebrow">Calendar</p>
             <h1 className="page-title">Scheduled posts</h1>
+            <p className="page-description">BUILD ef69131 API-SAFE-CHECK</p>
             <p className="page-description">
               Month view for posts currently scheduled to publish in {APP_TIME_ZONE_LABEL}.
             </p>
