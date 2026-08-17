@@ -5,6 +5,7 @@ const CONNECTION_ID = "primary";
 const AUTHORIZATION_URL = "https://www.linkedin.com/oauth/v2/authorization";
 const TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken";
 const USERINFO_URL = "https://api.linkedin.com/v2/userinfo";
+const IMAGES_URL = "https://api.linkedin.com/rest/images";
 const POSTS_URL = "https://api.linkedin.com/rest/posts";
 const SCOPES = ["openid", "profile", "w_member_social"];
 const STATE_TTL_MS = 10 * 60 * 1000;
@@ -52,6 +53,19 @@ type UserInfoResponse = {
   name?: string;
   localizedFirstName?: string;
   localizedLastName?: string;
+};
+
+type LinkedInErrorResponse = {
+  message?: string;
+  error_description?: string;
+  error?: string;
+};
+
+type InitializeImageUploadResponse = {
+  value?: {
+    uploadUrl?: string;
+    image?: string;
+  };
 };
 
 function requireLinkedInConfig(env: Env): { clientId: string; clientSecret: string } {
@@ -314,27 +328,123 @@ function parseLinkedInPostId(response: Response): string {
   return `linkedin-${crypto.randomUUID()}`;
 }
 
+function linkedInHeaders(accessToken: string, env: Env): HeadersInit {
+  return {
+    Authorization: `Bearer ${accessToken}`,
+    "LinkedIn-Version": env.LINKEDIN_API_VERSION ?? "202506",
+    "X-Restli-Protocol-Version": "2.0.0",
+  };
+}
+
+async function parseLinkedInError(
+  response: Response,
+  fallback: string,
+): Promise<string> {
+  const data = (await response.json().catch(() => ({}))) as LinkedInErrorResponse;
+  return data.message ?? data.error_description ?? data.error ?? fallback;
+}
+
+function decodeDataImageUrl(imageUrl: string): { contentType: string; bytes: Uint8Array } {
+  const match = /^data:(image\/[a-z0-9.+-]+);base64,([a-z0-9+/=\s]+)$/i.exec(
+    imageUrl,
+  );
+  if (!match) {
+    throw new Error("LinkedIn image publishing requires a data:image base64 upload");
+  }
+
+  const contentType = match[1].toLowerCase();
+  if (contentType === "image/svg+xml") {
+    throw new Error("LinkedIn image publishing does not support SVG uploads");
+  }
+
+  const binary = atob(match[2].replace(/\s/g, ""));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return { contentType, bytes };
+}
+
+async function uploadImageToLinkedIn(
+  env: Env,
+  accessToken: string,
+  owner: string,
+  imageUrl: string,
+): Promise<string> {
+  const image = decodeDataImageUrl(imageUrl);
+  const response = await fetch(`${IMAGES_URL}?action=initializeUpload`, {
+    method: "POST",
+    headers: {
+      ...linkedInHeaders(accessToken, env),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      initializeUploadRequest: {
+        owner,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      await parseLinkedInError(response, "LinkedIn image upload initialization failed"),
+    );
+  }
+
+  const data = (await response.json().catch(() => ({}))) as InitializeImageUploadResponse;
+  const uploadUrl = data.value?.uploadUrl;
+  const imageUrn = data.value?.image;
+  if (!uploadUrl || !imageUrn) {
+    throw new Error("LinkedIn image upload initialization response was incomplete");
+  }
+
+  const uploadResponse = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": image.contentType,
+    },
+    body: image.bytes,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error(
+      await parseLinkedInError(uploadResponse, "LinkedIn image upload failed"),
+    );
+  }
+
+  return imageUrn;
+}
+
 export async function publishPostToLinkedIn(
   db: D1Database,
   env: Env,
   post: Post,
 ): Promise<string> {
-  if (post.image_url) {
-    throw new Error("LinkedIn image publishing is not implemented yet");
-  }
-
   const connection = await getUsableConnection(db, env);
   if (!connection.member_urn) {
     throw new Error("LinkedIn profile is missing; reconnect LinkedIn");
   }
 
+  const content = post.image_url
+    ? {
+        media: {
+          id: await uploadImageToLinkedIn(
+            env,
+            connection.access_token,
+            connection.member_urn,
+            post.image_url,
+          ),
+        },
+      }
+    : undefined;
+
   const response = await fetch(POSTS_URL, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${connection.access_token}`,
+      ...linkedInHeaders(connection.access_token, env),
       "Content-Type": "application/json",
-      "LinkedIn-Version": env.LINKEDIN_API_VERSION ?? "202506",
-      "X-Restli-Protocol-Version": "2.0.0",
     },
     body: JSON.stringify({
       author: connection.member_urn,
@@ -345,19 +455,14 @@ export async function publishPostToLinkedIn(
         targetEntities: [],
         thirdPartyDistributionChannels: [],
       },
+      ...(content ? { content } : {}),
       lifecycleState: "PUBLISHED",
       isReshareDisabledByAuthor: false,
     }),
   });
 
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as {
-      message?: string;
-      error_description?: string;
-    };
-    throw new Error(
-      data.message ?? data.error_description ?? "LinkedIn post request failed",
-    );
+    throw new Error(await parseLinkedInError(response, "LinkedIn post request failed"));
   }
 
   return parseLinkedInPostId(response);
