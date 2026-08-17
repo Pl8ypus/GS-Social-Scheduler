@@ -1,4 +1,4 @@
-# Runbook — Pl8ypus LinkedIn Scheduler
+# Runbook - Social Scheduler
 
 Production operator guide for D1 backup/restore, deploy, rollback, secrets, and routine checks.
 
@@ -161,6 +161,79 @@ LinkedIn Developer Portal setup:
 After deploy, open `/admin` and click **Connect LinkedIn** to complete OAuth.
 
 `API_RATE_LIMITER` is configured in `wrangler.jsonc`. The namespace ID must exist in your Cloudflare account.
+
+---
+
+## Privacy Request Deletion Process
+
+Use this process only for verified privacy requests or administrator-approved data cleanup. Do not expose these operations through a public endpoint. Normal product delete/restore behaviour should remain soft-delete based.
+
+Before running deletion commands:
+
+1. Confirm the requester is Greg Staunton or otherwise has authority over the relevant scheduler records.
+2. Record the request, the verification method, the requested scope, and the administrator performing the deletion.
+3. Export a D1 backup unless legal or operational constraints require immediate deletion.
+4. Identify whether the request is for one post or for all LinkedIn scheduler data.
+
+### Delete A Selected Post
+
+This removes the post content, schedule information, status, LinkedIn post identifier, error message, and related publish events for one selected post id.
+
+```bash
+# Optional: inspect before deletion
+npx wrangler d1 execute pl8ypus-scheduler-db-prod --remote --command \
+  "SELECT id, status, scheduled_at, linkedin_post_id, deleted_at, created_at FROM posts WHERE id = <POST_ID>;"
+
+npx wrangler d1 execute pl8ypus-scheduler-db-prod --remote --command \
+  "DELETE FROM publish_events WHERE post_id = <POST_ID>;"
+
+npx wrangler d1 execute pl8ypus-scheduler-db-prod --remote --command \
+  "DELETE FROM posts WHERE id = <POST_ID>;"
+```
+
+Confirm deletion:
+
+```bash
+npx wrangler d1 execute pl8ypus-scheduler-db-prod --remote --command \
+  "SELECT COUNT(*) AS remaining_posts FROM posts WHERE id = <POST_ID>;"
+
+npx wrangler d1 execute pl8ypus-scheduler-db-prod --remote --command \
+  "SELECT COUNT(*) AS remaining_events FROM publish_events WHERE post_id = <POST_ID>;"
+```
+
+### Full LinkedIn Scheduler Data Purge
+
+This removes stored posts, schedule information, LinkedIn post references, publish events, OAuth state rows, the stored LinkedIn connection, and associated tokens. Use only when the verified request covers all scheduler data.
+
+```bash
+npx wrangler d1 execute pl8ypus-scheduler-db-prod --remote --command \
+  "DELETE FROM publish_events;"
+
+npx wrangler d1 execute pl8ypus-scheduler-db-prod --remote --command \
+  "DELETE FROM posts;"
+
+npx wrangler d1 execute pl8ypus-scheduler-db-prod --remote --command \
+  "DELETE FROM linkedin_oauth_states;"
+
+npx wrangler d1 execute pl8ypus-scheduler-db-prod --remote --command \
+  "DELETE FROM linkedin_connections WHERE id = 'primary';"
+```
+
+If the request also requires removal of aggregate scheduler run history, delete `scheduler_runs` after confirming those records are not needed for legal, security, or operational reasons:
+
+```bash
+npx wrangler d1 execute pl8ypus-scheduler-db-prod --remote --command \
+  "DELETE FROM scheduler_runs;"
+```
+
+Confirm deletion:
+
+```bash
+npx wrangler d1 execute pl8ypus-scheduler-db-prod --remote --command \
+  "SELECT (SELECT COUNT(*) FROM posts) AS posts_count, (SELECT COUNT(*) FROM publish_events) AS publish_events_count, (SELECT COUNT(*) FROM linkedin_connections) AS linkedin_connections_count, (SELECT COUNT(*) FROM linkedin_oauth_states) AS oauth_states_count;"
+```
+
+Keep a private administrative note of what was deleted and when. Do not promise deletion of records that must be retained to satisfy valid legal, platform, billing, security, or dispute-resolution obligations.
 
 ---
 

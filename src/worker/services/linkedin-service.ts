@@ -1,5 +1,7 @@
 import type { Env } from "../env";
 import type { Post } from "../types/post";
+import { resolveLinkedInCredentials } from "./linkedin-credentials-service";
+import { normalizeLinkedInCallbackUri } from "../lib/redirect";
 
 const CONNECTION_ID = "primary";
 const AUTHORIZATION_URL = "https://www.linkedin.com/oauth/v2/authorization";
@@ -54,23 +56,20 @@ type UserInfoResponse = {
   localizedLastName?: string;
 };
 
-function requireLinkedInConfig(env: Env): { clientId: string; clientSecret: string } {
-  if (!env.LINKEDIN_CLIENT_ID || !env.LINKEDIN_CLIENT_SECRET) {
+async function requireLinkedInConfig(
+  db: D1Database,
+  env: Env,
+): Promise<{ clientId: string; clientSecret: string }> {
+  const credentials = await resolveLinkedInCredentials(db, env);
+  if (!credentials) {
     throw new Error("LinkedIn client id/secret are not configured");
   }
 
-  return {
-    clientId: env.LINKEDIN_CLIENT_ID,
-    clientSecret: env.LINKEDIN_CLIENT_SECRET,
-  };
+  return credentials;
 }
 
 function getRedirectUri(requestUrl: string, env: Env): string {
-  if (env.LINKEDIN_REDIRECT_URI) {
-    return env.LINKEDIN_REDIRECT_URI;
-  }
-
-  return new URL("/api/admin/linkedin/callback", requestUrl).toString();
+  return normalizeLinkedInCallbackUri(requestUrl, env);
 }
 
 function fromNowIso(seconds?: number): string | null {
@@ -163,10 +162,11 @@ async function saveConnection(
 }
 
 async function exchangeToken(
+  db: D1Database,
   env: Env,
   params: Record<string, string>,
 ): Promise<TokenResponse> {
-  const { clientId, clientSecret } = requireLinkedInConfig(env);
+  const { clientId, clientSecret } = await requireLinkedInConfig(db, env);
   const body = new URLSearchParams({
     client_id: clientId,
     client_secret: clientSecret,
@@ -218,7 +218,7 @@ export async function createLinkedInAuthorizationUrl(
   env: Env,
   requestUrl: string,
 ): Promise<string> {
-  const { clientId } = requireLinkedInConfig(env);
+  const { clientId } = await requireLinkedInConfig(db, env);
   const redirectUri = getRedirectUri(requestUrl, env);
   const state = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -258,7 +258,7 @@ export async function completeLinkedInAuthorization(
     throw new Error("LinkedIn authorization state expired");
   }
 
-  const token = await exchangeToken(env, {
+  const token = await exchangeToken(db, env, {
     grant_type: "authorization_code",
     code,
     redirect_uri: stateRow.redirect_uri,
@@ -288,7 +288,7 @@ async function getUsableConnection(
     throw new Error("LinkedIn access token expired; reconnect LinkedIn");
   }
 
-  const refreshed = await exchangeToken(env, {
+  const refreshed = await exchangeToken(db, env, {
     grant_type: "refresh_token",
     refresh_token: connection.refresh_token,
   });
