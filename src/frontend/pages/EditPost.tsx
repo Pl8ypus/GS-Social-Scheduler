@@ -5,13 +5,12 @@ import type { Post } from "../types/post";
 
 async function fetchPost(id: string): Promise<Post> {
   const response = await fetch(`/api/posts/${id}`);
+  const data = (await response.json()) as { post: Post } | { error: string };
 
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error ?? `Failed to load post (${response.status})`);
+    throw new Error("error" in data ? data.error : "Failed to load post.");
   }
 
-  const data = (await response.json()) as { post: Post };
   return data.post;
 }
 

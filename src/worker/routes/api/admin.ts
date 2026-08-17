@@ -1,11 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "../../env";
 import {
-  clearLinkedInCredentials,
-  getLinkedInCredentialsStatus,
-  saveLinkedInCredentials,
-} from "../../services/linkedin-credentials-service";
-import {
   completeLinkedInAuthorization,
   createLinkedInAuthorizationUrl,
   disconnectLinkedIn,
@@ -15,39 +10,8 @@ import {
 const admin = new Hono<{ Bindings: Env }>();
 
 admin.get("/linkedin/status", async (c) => {
-  const [linkedin, credentials] = await Promise.all([
-    getLinkedInStatus(c.env.DB),
-    getLinkedInCredentialsStatus(c.env.DB, c.env),
-  ]);
-  return c.json({ linkedin, credentials });
-});
-
-admin.put("/linkedin/credentials", async (c) => {
-  let body: { client_id?: string; client_secret?: string };
-  try {
-    body = await c.req.json<{ client_id?: string; client_secret?: string }>();
-  } catch {
-    return c.json({ error: "invalid JSON body" }, 400);
-  }
-
-  const result = await saveLinkedInCredentials(
-    c.env.DB,
-    c.env,
-    body.client_id ?? "",
-    body.client_secret,
-  );
-  if (!result.ok) {
-    return c.json({ error: result.error }, result.status);
-  }
-
-  const credentials = await getLinkedInCredentialsStatus(c.env.DB, c.env);
-  return c.json({ credentials });
-});
-
-admin.delete("/linkedin/credentials", async (c) => {
-  await clearLinkedInCredentials(c.env.DB);
-  const credentials = await getLinkedInCredentialsStatus(c.env.DB, c.env);
-  return c.json({ credentials });
+  const status = await getLinkedInStatus(c.env.DB);
+  return c.json({ linkedin: status });
 });
 
 admin.get("/linkedin/authorize", async (c) => {

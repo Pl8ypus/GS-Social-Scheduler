@@ -20,13 +20,12 @@ type CalendarDay = {
 
 async function fetchPosts(): Promise<Post[]> {
   const response = await fetch("/api/posts");
+  const data = (await response.json()) as { posts: Post[] } | { error: string };
 
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error ?? `Failed to load posts (${response.status})`);
+    throw new Error("error" in data ? data.error : "Failed to load posts.");
   }
 
-  const data = (await response.json()) as { posts: Post[] };
   return data.posts;
 }
 

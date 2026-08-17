@@ -15,8 +15,6 @@ export interface Env extends GeneratedEnv {
   LINKEDIN_CLIENT_ID?: string;
   /** LinkedIn OAuth client secret. */
   LINKEDIN_CLIENT_SECRET?: string;
-  /** Optional key for encrypting credentials stored in D1 (falls back to CF_ACCESS_AUD). */
-  CREDENTIALS_ENCRYPTION_KEY?: string;
   /** Optional explicit OAuth callback URL registered in LinkedIn. */
   LINKEDIN_REDIRECT_URI?: string;
   /** LinkedIn REST API version, e.g. `202506`. */

@@ -1,4 +1,4 @@
-# Social Scheduler
+# Pl8ypus LinkedIn Scheduler
 
 Personal app to schedule posts to a LinkedIn profile. Runs on Cloudflare Workers with D1, protected by Cloudflare Access (configured separately).
 
@@ -13,8 +13,6 @@ Personal app to schedule posts to a LinkedIn profile. Runs on Cloudflare Workers
 See [BUILD_LOG.md](BUILD_LOG.md) for the full evidence trail.
 
 **Operations:** [RUNBOOK.md](RUNBOOK.md) — D1 backup/restore, deploy, rollback, secrets.
-
-**Privacy requests:** [RUNBOOK.md](RUNBOOK.md#privacy-request-deletion-process) documents the administrator-only manual D1 deletion process for verified privacy requests.
 
 ## Prerequisites
 

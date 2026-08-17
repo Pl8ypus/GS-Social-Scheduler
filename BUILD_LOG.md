@@ -1,4 +1,4 @@
-# Build log — Social Scheduler
+# Build log — Pl8ypus LinkedIn Scheduler
 
 Evidence trail for portfolio / operator review. Each slice records what was built, files touched, decisions, and what was tested.
 

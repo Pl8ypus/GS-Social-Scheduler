@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatScheduledAt } from "../utils/datetime";
 
 type LinkedInStatus = {
@@ -11,53 +11,31 @@ type LinkedInStatus = {
   updatedAt: string | null;
 };
 
-type LinkedInCredentialsStatus = {
-  configured: boolean;
-  clientId: string | null;
-  hasStoredSecret: boolean;
-  source: "database" | "environment" | null;
-  updatedAt: string | null;
-};
-
-type AdminStatusResponse = {
-  linkedin: LinkedInStatus;
-  credentials: LinkedInCredentialsStatus;
-};
-
-async function fetchAdminStatus(): Promise<AdminStatusResponse> {
+async function fetchLinkedInStatus(): Promise<LinkedInStatus> {
   const response = await fetch("/api/admin/linkedin/status");
+  const data = (await response.json()) as
+    | { linkedin: LinkedInStatus }
+    | { error: string };
 
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error ?? `Failed to load admin status (${response.status})`);
+    throw new Error("error" in data ? data.error : "Failed to load LinkedIn status.");
   }
 
-  const data = (await response.json()) as AdminStatusResponse;
-  return data;
+  return data.linkedin;
 }
 
 export default function Admin() {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const [status, setStatus] = useState<LinkedInStatus | null>(null);
-  const [credentials, setCredentials] = useState<LinkedInCredentialsStatus | null>(
-    null,
-  );
-  const [clientId, setClientId] = useState("");
-  const [clientSecret, setClientSecret] = useState("");
   const [error, setError] = useState(params.get("message") ?? "");
-  const [credentialsMessage, setCredentialsMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isSavingCredentials, setIsSavingCredentials] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const linkedInResult = params.get("linkedin");
 
   async function loadStatus() {
     setIsLoading(true);
     try {
-      const data = await fetchAdminStatus();
-      setStatus(data.linkedin);
-      setCredentials(data.credentials);
-      setClientId(data.credentials.clientId ?? "");
+      setStatus(await fetchLinkedInStatus());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load admin status.");
     } finally {
@@ -68,44 +46,6 @@ export default function Admin() {
   useEffect(() => {
     void loadStatus();
   }, []);
-
-  async function saveCredentials(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsSavingCredentials(true);
-    setError("");
-    setCredentialsMessage("");
-
-    try {
-      const response = await fetch("/api/admin/linkedin/credentials", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: clientId,
-          client_secret: clientSecret.trim() ? clientSecret : undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? `Failed to save credentials (${response.status})`);
-      }
-
-      const data = (await response.json()) as
-        | { credentials: LinkedInCredentialsStatus; error?: string }
-        | { error: string };
-
-      setCredentials(data.credentials);
-      setClientId(data.credentials.clientId ?? "");
-      setClientSecret("");
-      setCredentialsMessage("LinkedIn API credentials saved securely.");
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save LinkedIn credentials.",
-      );
-    } finally {
-      setIsSavingCredentials(false);
-    }
-  }
 
   async function disconnect() {
     if (!window.confirm("Disconnect LinkedIn publishing?")) return;
@@ -128,94 +68,16 @@ export default function Admin() {
     }
   }
 
-  const credentialsHint = credentials?.configured
-    ? credentials.source === "environment"
-      ? "Currently loaded from Worker environment variables. Saving here stores them encrypted in D1 instead."
-      : "Client secret is stored encrypted and is never shown again after saving."
-    : "Add the Client ID and Client Secret from your LinkedIn Developer app.";
-
   return (
     <>
       <header className="page-header">
         <p className="page-eyebrow">Admin</p>
         <h1 className="page-title">LinkedIn API</h1>
         <p className="page-description">
-          Configure LinkedIn OAuth credentials and connect the scheduler to your
-          profile. Credentials are encrypted at rest; only the Client ID is shown
-          after saving.
+          Connect the production scheduler to LinkedIn. OAuth tokens are stored in
+          D1 and used by the cron publisher.
         </p>
       </header>
-
-      <section className="card stack" aria-label="LinkedIn API credentials">
-        <div>
-          <p className="form-section-label">API credentials</p>
-          <p className="page-description">{credentialsHint}</p>
-        </div>
-
-        {isLoading && <p className="loading-state">Loading credentials…</p>}
-
-        {!isLoading && (
-          <form className="stack" onSubmit={saveCredentials}>
-            <div className="field">
-              <label htmlFor="linkedin_client_id" className="field-label">
-                Client ID
-              </label>
-              <input
-                id="linkedin_client_id"
-                className="field-input"
-                type="text"
-                autoComplete="off"
-                spellCheck={false}
-                value={clientId}
-                onChange={(event) => setClientId(event.target.value)}
-                required
-              />
-            </div>
-
-            <div className="field">
-              <label htmlFor="linkedin_client_secret" className="field-label">
-                Client secret
-              </label>
-              <input
-                id="linkedin_client_secret"
-                className="field-input"
-                type="password"
-                autoComplete="new-password"
-                value={clientSecret}
-                onChange={(event) => setClientSecret(event.target.value)}
-                placeholder={
-                  credentials?.hasStoredSecret
-                    ? "Leave blank to keep the saved secret"
-                    : "Required"
-                }
-                required={!credentials?.hasStoredSecret}
-              />
-            </div>
-
-            {credentials?.configured && credentials.updatedAt && (
-              <p className="empty-state">
-                Last updated {formatScheduledAt(credentials.updatedAt)}.
-              </p>
-            )}
-
-            {credentialsMessage && (
-              <p className="alert alert-success" role="status">
-                {credentialsMessage}
-              </p>
-            )}
-
-            <div className="btn-row">
-              <button
-                className="btn btn--primary"
-                disabled={isSavingCredentials}
-                type="submit"
-              >
-                {isSavingCredentials ? "Saving…" : "Save credentials"}
-              </button>
-            </div>
-          </form>
-        )}
-      </section>
 
       <section className="card stack" aria-label="LinkedIn connection">
         <div>
@@ -249,8 +111,8 @@ export default function Admin() {
           )}
           {!isLoading && !status?.connected && (
             <p className="empty-state">
-              LinkedIn is not connected. Save credentials above, then connect to
-              enable publishing.
+              LinkedIn is not connected. Publishing will fail until OAuth is
+              completed.
             </p>
           )}
         </div>
@@ -263,15 +125,9 @@ export default function Admin() {
         {error && <p className="alert alert-error" role="alert">{error}</p>}
 
         <div className="btn-row">
-          {credentials?.configured ? (
-            <a className="btn btn--primary" href="/api/admin/linkedin/authorize">
-              {status?.connected ? "Reconnect LinkedIn" : "Connect LinkedIn"}
-            </a>
-          ) : (
-            <button className="btn btn--primary" disabled type="button">
-              Connect LinkedIn
-            </button>
-          )}
+          <a className="btn btn--primary" href="/api/admin/linkedin/authorize">
+            {status?.connected ? "Reconnect LinkedIn" : "Connect LinkedIn"}
+          </a>
           {status?.connected && (
             <button
               className="btn btn--ghost"
