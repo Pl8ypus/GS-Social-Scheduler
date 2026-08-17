@@ -1,5 +1,6 @@
 import PostForm, { type PostFormValues } from "../components/PostForm";
 import type { Post } from "../types/post";
+import { parseApiResponse } from "../utils/api";
 
 async function createPost(values: PostFormValues): Promise<Post> {
   const response = await fetch("/api/posts", {
@@ -8,11 +9,10 @@ async function createPost(values: PostFormValues): Promise<Post> {
     body: JSON.stringify(values),
   });
 
-  const data = (await response.json()) as { post: Post } | { error: string };
-  if (!response.ok) {
-    throw new Error("error" in data ? data.error : "Failed to save post.");
-  }
-
+  const data = await parseApiResponse<{ post: Post }>(
+    response,
+    "Failed to save post.",
+  );
   return data.post;
 }
 

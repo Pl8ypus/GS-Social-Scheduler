@@ -2,15 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import PostForm, { type PostFormValues } from "../components/PostForm";
 import type { Post } from "../types/post";
+import { parseApiResponse } from "../utils/api";
 
 async function fetchPost(id: string): Promise<Post> {
   const response = await fetch(`/api/posts/${id}`);
-  const data = (await response.json()) as { post: Post } | { error: string };
-
-  if (!response.ok) {
-    throw new Error("error" in data ? data.error : "Failed to load post.");
-  }
-
+  const data = await parseApiResponse<{ post: Post }>(
+    response,
+    "Failed to load post.",
+  );
   return data.post;
 }
 
@@ -21,11 +20,10 @@ async function updatePost(id: string, values: PostFormValues): Promise<Post> {
     body: JSON.stringify(values),
   });
 
-  const data = (await response.json()) as { post: Post } | { error: string };
-  if (!response.ok) {
-    throw new Error("error" in data ? data.error : "Failed to update post.");
-  }
-
+  const data = await parseApiResponse<{ post: Post }>(
+    response,
+    "Failed to update post.",
+  );
   return data.post;
 }
 

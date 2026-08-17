@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatScheduledAt } from "../utils/datetime";
+import { ensureApiOk, parseApiResponse } from "../utils/api";
 
 type LinkedInStatus = {
   connected: boolean;
@@ -13,14 +14,10 @@ type LinkedInStatus = {
 
 async function fetchLinkedInStatus(): Promise<LinkedInStatus> {
   const response = await fetch("/api/admin/linkedin/status");
-  const data = (await response.json()) as
-    | { linkedin: LinkedInStatus }
-    | { error: string };
-
-  if (!response.ok) {
-    throw new Error("error" in data ? data.error : "Failed to load LinkedIn status.");
-  }
-
+  const data = await parseApiResponse<{ linkedin: LinkedInStatus }>(
+    response,
+    "Failed to load LinkedIn status.",
+  );
   return data.linkedin;
 }
 
@@ -56,10 +53,7 @@ export default function Admin() {
       const response = await fetch("/api/admin/linkedin/disconnect", {
         method: "POST",
       });
-      if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? "Failed to disconnect LinkedIn.");
-      }
+      await ensureApiOk(response, "Failed to disconnect LinkedIn.");
       await loadStatus();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to disconnect LinkedIn.");

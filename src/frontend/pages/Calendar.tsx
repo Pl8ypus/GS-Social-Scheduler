@@ -10,6 +10,7 @@ import {
   formatTime,
   plainDateKey,
 } from "../utils/datetime";
+import { parseApiResponse } from "../utils/api";
 
 type CalendarDay = {
   date: Date;
@@ -20,12 +21,10 @@ type CalendarDay = {
 
 async function fetchPosts(): Promise<Post[]> {
   const response = await fetch("/api/posts");
-  const data = (await response.json()) as { posts: Post[] } | { error: string };
-
-  if (!response.ok) {
-    throw new Error("error" in data ? data.error : "Failed to load posts.");
-  }
-
+  const data = await parseApiResponse<{ posts: Post[] }>(
+    response,
+    "Failed to load posts.",
+  );
   return data.posts;
 }
 
