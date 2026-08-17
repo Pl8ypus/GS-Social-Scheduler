@@ -8,7 +8,7 @@
     "build": "vite build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy": "node -e \"const { spawnSync } = require('node:child_process'); const run = (cmd, args) => { const result = spawnSync(cmd, args, { stdio: 'inherit', shell: true, env: process.env }); if (result.status) process.exit(result.status); }; run('npm', ['run', 'build']); run('wrangler', ['deploy', '--config', 'src/frontend/dist/gs_social_scheduler/wrangler.json']);\"",
+    "deploy": "node -e \"const { spawnSync } = require('node:child_process'); const run = (cmd, args) => { const result = spawnSync(cmd, args, { stdio: 'inherit', shell: true, env: process.env }); if (result.status) process.exit(result.status); }; run('npm', ['run', 'build']); run('wrangler', ['deploy', '--config', 'src/frontend/dist/gs_social_scheduler/wrangler.json']); run('wrangler', ['pages', 'deploy', 'src/frontend/dist/client', '--project-name', 'gs-social-scheduler', '--branch', 'main']);\"",
     "types": "wrangler types",
     "db:migrate:production": "wrangler d1 migrations apply pl8ypus-scheduler-db-prod --remote"
   },

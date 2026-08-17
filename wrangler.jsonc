@@ -11,8 +11,8 @@
   },
   "routes": [
     {
-      "pattern": "linkedin-scheduler.greg-staunton.com",
-      "custom_domain": true
+      "pattern": "linkedin-scheduler.greg-staunton.com/api/*",
+      "zone_name": "greg-staunton.com"
     }
   ],
   // CF_ACCESS_TEAM_DOMAIN / CF_ACCESS_AUD must be set (dashboard or
