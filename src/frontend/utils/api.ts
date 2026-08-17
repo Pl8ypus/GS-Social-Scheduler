@@ -2,6 +2,11 @@ type ApiErrorBody = {
   error?: unknown;
 };
 
+type ResponseBody = {
+  data: unknown;
+  isJson: boolean;
+};
+
 function getApiErrorMessage(body: unknown): string | null {
   if (!body || typeof body !== "object" || !("error" in body)) {
     return null;
@@ -11,14 +16,14 @@ function getApiErrorMessage(body: unknown): string | null {
   return typeof error === "string" && error.trim() ? error : null;
 }
 
-async function readResponseBody(response: Response): Promise<unknown> {
+async function readResponseBody(response: Response): Promise<ResponseBody> {
   const text = await response.text().catch(() => "");
-  if (!text.trim()) return null;
+  if (!text.trim()) return { data: null, isJson: false };
 
   try {
-    return JSON.parse(text) as unknown;
+    return { data: JSON.parse(text) as unknown, isJson: true };
   } catch {
-    return null;
+    return { data: null, isJson: false };
   }
 }
 
@@ -30,15 +35,18 @@ export async function parseApiResponse<T>(
 
   if (!response.ok) {
     throw new Error(
-      getApiErrorMessage(body) ?? `${fallbackMessage} (${response.status})`,
+      getApiErrorMessage(body.data) ?? `${fallbackMessage} (${response.status})`,
     );
   }
 
-  if (body === null) {
+  if (!body.isJson) {
+    if (response.redirected) {
+      throw new Error(`${fallbackMessage}: sign in again and retry.`);
+    }
     throw new Error(`${fallbackMessage}: empty response from server.`);
   }
 
-  return body as T;
+  return body.data as T;
 }
 
 export async function ensureApiOk(
@@ -49,6 +57,6 @@ export async function ensureApiOk(
 
   const body = await readResponseBody(response);
   throw new Error(
-    getApiErrorMessage(body) ?? `${fallbackMessage} (${response.status})`,
+    getApiErrorMessage(body.data) ?? `${fallbackMessage} (${response.status})`,
   );
 }
