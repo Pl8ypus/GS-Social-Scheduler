@@ -755,6 +755,39 @@ h3 {
   color: var(--status-failed-fg);
 }
 
+.row-error-details {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--status-failed-fg);
+}
+
+.row-error-details summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.row-error-details dl {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+}
+
+.row-error-details div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.row-error-details dt {
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
+.row-error-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+}
+
 .actions-cell {
   display: flex;
   flex-wrap: wrap;

@@ -11,10 +11,33 @@ export type ServiceResult<T> =
   | { ok: true; data: T }
   | { ok: false; status: number; error: string };
 
+const QUALIFIED_POST_COLUMNS = `posts.id AS id, posts.content AS content,
+  posts.link_url AS link_url, posts.image_url AS image_url,
+  posts.scheduled_at AS scheduled_at, posts.status AS status,
+  posts.linkedin_post_id AS linkedin_post_id,
+  posts.error_message AS error_message, posts.created_at AS created_at`;
+
+const POST_WITH_LATEST_EVENT_COLUMNS = `${QUALIFIED_POST_COLUMNS},
+  latest_event.id AS latest_publish_event_id,
+  latest_event.attempted_at AS latest_publish_attempted_at,
+  latest_event.result AS latest_publish_result,
+  latest_event.error_detail AS latest_publish_error_detail`;
+
+function latestPublishEventJoin(): string {
+  return `LEFT JOIN publish_events latest_event
+    ON latest_event.id = (
+      SELECT id FROM publish_events
+      WHERE post_id = posts.id
+      ORDER BY datetime(attempted_at) DESC, id DESC
+      LIMIT 1
+    )`;
+}
+
 export async function listPosts(db: D1Database): Promise<Post[]> {
   const { results } = await db
     .prepare(
-      `SELECT ${POST_COLUMNS} FROM posts
+      `SELECT ${POST_WITH_LATEST_EVENT_COLUMNS} FROM posts
+       ${latestPublishEventJoin()}
        WHERE deleted_at IS NULL
        ORDER BY created_at DESC, id DESC`,
     )
@@ -43,12 +66,26 @@ export async function getPost(
     return { ok: false, status: 400, error: "invalid post id" };
   }
 
-  const post = await getPostById(db, id);
+  const post = await getPostWithLatestPublishEvent(db, id);
   if (!post) {
     return { ok: false, status: 404, error: "post not found" };
   }
 
   return { ok: true, data: post };
+}
+
+export async function getPostWithLatestPublishEvent(
+  db: D1Database,
+  id: number,
+): Promise<Post | null> {
+  return db
+    .prepare(
+      `SELECT ${POST_WITH_LATEST_EVENT_COLUMNS} FROM posts
+       ${latestPublishEventJoin()}
+       WHERE posts.id = ? AND deleted_at IS NULL`,
+    )
+    .bind(id)
+    .first<Post>();
 }
 
 export async function createPost(

@@ -1,5 +1,5 @@
 import { env } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../../src/worker/app";
 import {
   cancelScheduledPost,
@@ -13,6 +13,10 @@ import {
 
 describe("posts API routes", () => {
   const app = createApp();
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
   async function api(
     path: string,
@@ -118,6 +122,139 @@ describe("posts API routes", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as { posts: unknown[] };
     expect(Array.isArray(body.posts)).toBe(true);
+  });
+
+  it("GET /api/posts includes latest publish error details", async () => {
+    const created = await createPost(env.DB, { content: "Failed with detail" });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await env.DB.prepare(
+      `UPDATE posts SET status = 'failed', error_message = 'Publish failed'
+       WHERE id = ?`,
+    )
+      .bind(created.data.id)
+      .run();
+    await env.DB.prepare(
+      `INSERT INTO publish_events
+         (post_id, attempted_at, result, error_detail, linkedin_post_id)
+       VALUES (?, ?, 'failed', ?, ?)`,
+    )
+      .bind(
+        created.data.id,
+        new Date().toISOString(),
+        "LinkedIn post request failed (HTTP 400): Bad payload",
+        "claim-test",
+      )
+      .run();
+
+    const response = await api("/api/posts");
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      posts: Array<{
+        id: number;
+        latest_publish_result: string | null;
+        latest_publish_error_detail: string | null;
+      }>;
+    };
+    const post = body.posts.find((post) => post.id === created.data.id);
+    expect(post?.latest_publish_result).toBe("failed");
+    expect(post?.latest_publish_error_detail).toContain("Bad payload");
+  });
+
+  it("POST /api/posts/:id/send publishes a scheduled post immediately", async () => {
+    const created = await createPost(env.DB, {
+      content: "Send now scheduled",
+      scheduled_at: new Date(Date.now() + 60_000).toISOString(),
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await env.DB.prepare(
+      `INSERT OR REPLACE INTO linkedin_connections (
+         id, access_token, refresh_token, expires_at, refresh_token_expires_at,
+         scope, member_urn, profile_name, connected_at, updated_at
+       )
+       VALUES ('primary', 'access-token', NULL, ?, NULL, 'openid,profile,w_member_social',
+         'urn:li:person:test-member', 'Test User', ?, ?)`,
+    )
+      .bind(
+        new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        new Date().toISOString(),
+        new Date().toISOString(),
+      )
+      .run();
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(null, {
+          status: 201,
+          headers: { "x-restli-id": "urn:li:share:send-now" },
+        }),
+      ),
+    );
+
+    const response = await api(`/api/posts/${created.data.id}/send`, {
+      method: "POST",
+    });
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      post: { status: string; latest_publish_result: string | null };
+      linkedin_post_id: string;
+    };
+    expect(body.post.status).toBe("posted");
+    expect(body.post.latest_publish_result).toBe("success");
+    expect(body.linkedin_post_id).toBe("urn:li:share:send-now");
+  });
+
+  it("POST /api/posts/:id/send retries a failed post and records failure details", async () => {
+    const created = await createPost(env.DB, { content: "Retry failed" });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await env.DB.prepare(
+      `UPDATE posts SET status = 'failed', error_message = 'Publish failed'
+       WHERE id = ?`,
+    )
+      .bind(created.data.id)
+      .run();
+    await env.DB.prepare(
+      `INSERT OR REPLACE INTO linkedin_connections (
+         id, access_token, refresh_token, expires_at, refresh_token_expires_at,
+         scope, member_urn, profile_name, connected_at, updated_at
+       )
+       VALUES ('primary', 'access-token', NULL, ?, NULL, 'openid,profile,w_member_social',
+         'urn:li:person:test-member', 'Test User', ?, ?)`,
+    )
+      .bind(
+        new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        new Date().toISOString(),
+        new Date().toISOString(),
+      )
+      .run();
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          { message: "Requested version 20250601 is not active" },
+          { status: 400 },
+        ),
+      ),
+    );
+
+    const response = await api(`/api/posts/${created.data.id}/send`, {
+      method: "POST",
+    });
+    expect(response.status).toBe(502);
+    const body = (await response.json()) as {
+      error: string;
+      post: { status: string; latest_publish_error_detail: string | null };
+    };
+    expect(body.error).toContain("Requested version");
+    expect(body.post.status).toBe("failed");
+    expect(body.post.latest_publish_error_detail).toContain("HTTP 400");
   });
 });
 

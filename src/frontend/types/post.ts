@@ -15,6 +15,10 @@ export interface Post {
   linkedin_post_id: string | null;
   error_message: string | null;
   created_at: string;
+  latest_publish_event_id?: number | null;
+  latest_publish_attempted_at?: string | null;
+  latest_publish_result?: "success" | "failed" | null;
+  latest_publish_error_detail?: string | null;
 }
 
 export function previewContent(content: string, maxLength = 80): string {

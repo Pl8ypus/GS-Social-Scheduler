@@ -331,7 +331,7 @@ function parseLinkedInPostId(response: Response): string {
 function linkedInHeaders(accessToken: string, env: Env): HeadersInit {
   return {
     Authorization: `Bearer ${accessToken}`,
-    "LinkedIn-Version": env.LINKEDIN_API_VERSION ?? "202506",
+    "LinkedIn-Version": env.LINKEDIN_API_VERSION ?? "202608",
     "X-Restli-Protocol-Version": "2.0.0",
   };
 }
@@ -340,8 +340,19 @@ async function parseLinkedInError(
   response: Response,
   fallback: string,
 ): Promise<string> {
-  const data = (await response.json().catch(() => ({}))) as LinkedInErrorResponse;
-  return data.message ?? data.error_description ?? data.error ?? fallback;
+  const text = await response.text().catch(() => "");
+  let detail = text.trim();
+  if (detail) {
+    try {
+      const data = JSON.parse(detail) as LinkedInErrorResponse;
+      detail = data.message ?? data.error_description ?? data.error ?? detail;
+    } catch {
+      // Keep the raw response text when LinkedIn returns a non-JSON body.
+    }
+  }
+
+  const message = detail || fallback;
+  return `${fallback} (HTTP ${response.status}): ${message}`;
 }
 
 function decodeDataImageUrl(imageUrl: string): { contentType: string; bytes: Uint8Array } {

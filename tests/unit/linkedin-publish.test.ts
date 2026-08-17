@@ -130,6 +130,8 @@ describe("LinkedIn publishing", () => {
         ...post,
         image_url: "data:image/jpeg;base64,aGVsbG8=",
       }),
-    ).rejects.toThrow("Accessing this image resource is forbidden");
+    ).rejects.toThrow(
+      "LinkedIn image upload initialization failed (HTTP 403): Accessing this image resource is forbidden",
+    );
   });
 });

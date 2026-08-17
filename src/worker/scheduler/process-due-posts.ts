@@ -66,6 +66,26 @@ export async function claimPostForPublish(
   return result.meta.changes === 1;
 }
 
+/** Atomically claim one scheduled or failed post for an explicit user retry. */
+export async function claimPostForManualPublish(
+  db: D1Database,
+  post: Post,
+  linkedinPostId: string,
+  claimedAt: string = new Date().toISOString(),
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `UPDATE posts
+       SET status = 'publishing', linkedin_post_id = ?, error_message = NULL,
+           publish_claim_at = ?
+       WHERE id = ? AND status IN ('scheduled', 'failed')`,
+    )
+    .bind(linkedinPostId, claimedAt, post.id)
+    .run();
+
+  return result.meta.changes === 1;
+}
+
 /**
  * Atomically re-claim a stuck `publishing` post via compare-and-set on its
  * lease timestamp. Only one concurrent runner can win a given row, mirroring
@@ -254,6 +274,53 @@ export async function publishDuePost(
     result: "success",
     linkedinPostId,
     schedulerRunId: run?.runId,
+  });
+
+  return linkedinPostId;
+}
+
+export async function publishPostNow(
+  db: D1Database,
+  post: Post,
+  publish: PublishExecutor = defaultPublishExecutor,
+  linkedinPostId = buildPublishClaimId(post.id),
+): Promise<string> {
+  if (post.status === "publishing") {
+    throw new Error("post is already being published");
+  }
+  if (post.status !== "scheduled" && post.status !== "failed") {
+    throw new Error("only scheduled or failed posts can be sent now");
+  }
+
+  const claimed = await claimPostForManualPublish(db, post, linkedinPostId);
+  if (!claimed) {
+    throw new Error("post was not available for publishing");
+  }
+
+  try {
+    linkedinPostId = (await publish(linkedinPostId, post)) ?? linkedinPostId;
+  } catch (error) {
+    const errorDetail = formatErrorDetail(error);
+    console.error(`[scheduler] Manual publish failed post id=${post.id}:`, error);
+    await markPostFailed(db, post.id, GENERIC_PUBLISH_ERROR);
+    await logPublishEvent(db, {
+      postId: post.id,
+      result: "failed",
+      errorDetail,
+      linkedinPostId,
+    });
+    throw error;
+  }
+
+  const completed = await completePublish(db, post.id, linkedinPostId);
+  if (!completed) {
+    throw new Error("failed to mark post as posted after publish");
+  }
+
+  await logPublishEvent(db, {
+    postId: post.id,
+    result: "success",
+    linkedinPostId,
   });
 
   return linkedinPostId;

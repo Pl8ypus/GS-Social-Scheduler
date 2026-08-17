@@ -38,6 +38,15 @@ async function cancelSchedule(id: number): Promise<void> {
   await ensureApiOk(response, "Failed to cancel schedule.");
 }
 
+async function sendPostNow(id: number): Promise<Post | null> {
+  const response = await fetch(`/api/posts/${id}/send`, { method: "POST" });
+  const data = await parseApiResponse<{ post: Post | null }>(
+    response,
+    "Failed to send post.",
+  );
+  return data.post;
+}
+
 async function fetchDeletedPosts(): Promise<Post[]> {
   const response = await fetch("/api/posts/deleted");
   const data = await parseApiResponse<{ posts: Post[] }>(
@@ -64,6 +73,8 @@ export default function Posts() {
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [deletedPosts, setDeletedPosts] = useState<Post[]>([]);
   const [restoringId, setRestoringId] = useState<number | null>(null);
+  const [sendingId, setSendingId] = useState<number | null>(null);
+  const [success, setSuccess] = useState("");
 
   const failedCount =
     health?.failed_posts_count ??
@@ -113,6 +124,7 @@ export default function Posts() {
   async function handleConfirmDelete(id: number) {
     setDeletingId(id);
     setError("");
+    setSuccess("");
     try {
       await deletePost(id);
       setConfirmDeleteId(null);
@@ -127,6 +139,7 @@ export default function Posts() {
   async function handleRestore(id: number) {
     setRestoringId(id);
     setError("");
+    setSuccess("");
     try {
       await restorePost(id);
       await Promise.all([loadPosts(), loadHealth(), loadDeleted()]);
@@ -140,6 +153,7 @@ export default function Posts() {
   async function handleConfirmCancel(id: number) {
     setCancellingId(id);
     setError("");
+    setSuccess("");
     try {
       await cancelSchedule(id);
       setConfirmCancelId(null);
@@ -148,6 +162,22 @@ export default function Posts() {
       setError(err instanceof Error ? err.message : "Failed to cancel schedule.");
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  async function handleSendNow(id: number) {
+    setSendingId(id);
+    setError("");
+    setSuccess("");
+    try {
+      const post = await sendPostNow(id);
+      setSuccess(`Post ${post?.id ?? id} sent.`);
+      await Promise.all([loadPosts(), loadHealth()]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send post.");
+      await Promise.all([loadPosts(), loadHealth()]);
+    } finally {
+      setSendingId(null);
     }
   }
 
@@ -190,6 +220,7 @@ export default function Posts() {
 
         {isLoading && <p className="loading-state">Loading…</p>}
         {error && <p className="alert alert-error" role="alert">{error}</p>}
+        {success && <p className="alert alert-success" role="status">{success}</p>}
 
         {!isLoading && posts.length === 0 && (
           <p className="empty-state">No posts yet.</p>
@@ -215,8 +246,28 @@ export default function Posts() {
                   >
                     <td className="content-cell">
                       {previewContent(post.content)}
-                      {post.status === "failed" && post.error_message && (
-                        <p className="row-error-detail">{post.error_message}</p>
+                      {post.status === "failed" && (
+                        <details className="row-error-details">
+                          <summary>Error details</summary>
+                          <dl>
+                            <div>
+                              <dt>Latest error</dt>
+                              <dd>
+                                {post.latest_publish_error_detail ||
+                                  post.error_message ||
+                                  "No detailed publish error was recorded."}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Attempted</dt>
+                              <dd>{formatScheduledAt(post.latest_publish_attempted_at ?? null)}</dd>
+                            </div>
+                            <div>
+                              <dt>Status</dt>
+                              <dd>{post.latest_publish_result ?? "unknown"}</dd>
+                            </div>
+                          </dl>
+                        </details>
                       )}
                     </td>
                     <td>
@@ -230,6 +281,16 @@ export default function Posts() {
                           <Link to={`/posts/${post.id}/edit`} className="btn btn--ghost btn--sm">
                             Edit
                           </Link>
+                        )}
+                        {(post.status === "scheduled" || post.status === "failed") && (
+                          <button
+                            type="button"
+                            className="btn btn--primary btn--sm"
+                            onClick={() => void handleSendNow(post.id)}
+                            disabled={sendingId === post.id}
+                          >
+                            {sendingId === post.id ? "Sending..." : "Send now"}
+                          </button>
                         )}
                         {post.status === "scheduled" && confirmCancelId === post.id ? (
                           <div className="confirm-inline">

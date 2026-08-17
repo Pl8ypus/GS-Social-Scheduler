@@ -22,7 +22,7 @@
     "CF_ACCESS_TEAM_DOMAIN": "pl8ypus.cloudflareaccess.com",
     "CF_ACCESS_AUD": "24febcf5978165a5704dad393b19ca5ecab83656111ca66701ee626d3d875622",
     "LINKEDIN_REDIRECT_URI": "https://linkedin-scheduler.greg-staunton.com/api/admin/linkedin/callback",
-    "LINKEDIN_API_VERSION": "202506"
+    "LINKEDIN_API_VERSION": "202608"
   },
   "ratelimits": [
     {
