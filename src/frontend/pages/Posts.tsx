@@ -8,25 +8,25 @@ import { formatScheduledAt } from "../utils/datetime";
 
 async function fetchPosts(): Promise<Post[]> {
   const response = await fetch("/api/posts");
-  const data = (await response.json()) as { posts: Post[] } | { error: string };
 
   if (!response.ok) {
-    throw new Error("error" in data ? data.error : "Failed to load posts.");
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Failed to load posts (${response.status})`);
   }
 
+  const data = (await response.json()) as { posts: Post[] };
   return data.posts;
 }
 
 async function fetchSchedulerHealth(): Promise<SchedulerHealth> {
   const response = await fetch("/api/reporting/health");
-  const data = (await response.json()) as
-    | { health: SchedulerHealth }
-    | { error: string };
 
   if (!response.ok) {
-    throw new Error("error" in data ? data.error : "Failed to load scheduler health.");
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Failed to load scheduler health (${response.status})`);
   }
 
+  const data = (await response.json()) as { health: SchedulerHealth };
   return data.health;
 }
 
@@ -35,36 +35,39 @@ async function deletePost(id: number): Promise<void> {
 
   if (response.status === 204) return;
 
-  const data = (await response.json()) as { error?: string };
-  throw new Error(data.error ?? "Failed to delete post.");
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Failed to delete post (${response.status})`);
+  }
 }
 
 async function cancelSchedule(id: number): Promise<void> {
   const response = await fetch(`/api/posts/${id}/cancel`, { method: "POST" });
-  const data = (await response.json()) as { error?: string };
 
   if (!response.ok) {
-    throw new Error(data.error ?? "Failed to cancel schedule.");
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Failed to cancel schedule (${response.status})`);
   }
 }
 
 async function fetchDeletedPosts(): Promise<Post[]> {
   const response = await fetch("/api/posts/deleted");
-  const data = (await response.json()) as { posts: Post[] } | { error: string };
 
   if (!response.ok) {
-    throw new Error("error" in data ? data.error : "Failed to load deleted posts.");
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Failed to load deleted posts (${response.status})`);
   }
 
+  const data = (await response.json()) as { posts: Post[] };
   return data.posts;
 }
 
 async function restorePost(id: number): Promise<void> {
   const response = await fetch(`/api/posts/${id}/restore`, { method: "POST" });
-  const data = (await response.json()) as { error?: string };
 
   if (!response.ok) {
-    throw new Error(data.error ?? "Failed to restore post.");
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Failed to restore post (${response.status})`);
   }
 }
 

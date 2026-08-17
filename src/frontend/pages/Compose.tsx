@@ -8,11 +8,12 @@ async function createPost(values: PostFormValues): Promise<Post> {
     body: JSON.stringify(values),
   });
 
-  const data = (await response.json()) as { post: Post } | { error: string };
   if (!response.ok) {
-    throw new Error("error" in data ? data.error : "Failed to save post.");
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Failed to save post (${response.status})`);;
   }
 
+  const data = (await response.json()) as { post: Post };
   return data.post;
 }
 

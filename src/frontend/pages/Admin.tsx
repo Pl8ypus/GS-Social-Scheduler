@@ -26,12 +26,13 @@ type AdminStatusResponse = {
 
 async function fetchAdminStatus(): Promise<AdminStatusResponse> {
   const response = await fetch("/api/admin/linkedin/status");
-  const data = (await response.json()) as AdminStatusResponse | { error: string };
 
   if (!response.ok) {
-    throw new Error("error" in data ? data.error : "Failed to load admin status.");
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Failed to load admin status (${response.status})`);
   }
 
+  const data = (await response.json()) as AdminStatusResponse;
   return data;
 }
 
@@ -83,13 +84,15 @@ export default function Admin() {
           client_secret: clientSecret.trim() ? clientSecret : undefined,
         }),
       });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? `Failed to save credentials (${response.status})`);
+      }
+
       const data = (await response.json()) as
         | { credentials: LinkedInCredentialsStatus; error?: string }
         | { error: string };
-
-      if (!response.ok) {
-        throw new Error("error" in data ? data.error : "Failed to save credentials.");
-      }
 
       setCredentials(data.credentials);
       setClientId(data.credentials.clientId ?? "");
