@@ -4,9 +4,26 @@ import { createApp } from "../../src/worker/app";
 
 describe("LinkedIn admin API", () => {
   const app = createApp();
+  const sameOrigin = "http://localhost";
 
-  async function api(path: string, init?: RequestInit): Promise<Response> {
-    return app.fetch(new Request(`http://localhost${path}`, init), env);
+  async function api(
+    path: string,
+    init?: RequestInit,
+    options: { includeOrigin?: boolean } = {},
+  ): Promise<Response> {
+    const method = init?.method?.toUpperCase() ?? "GET";
+    const headers = new Headers(init?.headers);
+    if (
+      method !== "GET" &&
+      method !== "HEAD" &&
+      method !== "OPTIONS" &&
+      options.includeOrigin !== false &&
+      !headers.has("Origin") &&
+      !headers.has("Referer")
+    ) {
+      headers.set("Origin", sameOrigin);
+    }
+    return app.fetch(new Request(`http://localhost${path}`, { ...init, headers }), env);
   }
 
   it("reports disconnected status by default", async () => {
@@ -43,5 +60,26 @@ describe("LinkedIn admin API", () => {
       linkedin: { connected: boolean };
     };
     expect(body.linkedin.connected).toBe(false);
+  });
+
+  it("rejects LinkedIn disconnect from a malicious Origin", async () => {
+    const response = await api("/api/admin/linkedin/disconnect", {
+      method: "POST",
+      headers: { Origin: "https://attacker.example" },
+    });
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "forbidden" });
+  });
+
+  it("rejects LinkedIn disconnect without Origin or Referer", async () => {
+    const response = await api(
+      "/api/admin/linkedin/disconnect",
+      { method: "POST" },
+      { includeOrigin: false },
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "forbidden" });
   });
 });

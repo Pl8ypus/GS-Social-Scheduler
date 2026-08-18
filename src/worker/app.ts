@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "./env";
 import { accessAuth, type AccessVariables } from "./middleware/access";
+import { validateUnsafeRequestOrigin } from "./middleware/origin";
 import { rateLimit } from "./middleware/rate-limit";
 import api from "./routes/api";
 
@@ -18,6 +19,7 @@ export function createApp() {
 
   // M2: throttle before the expensive JWT verification below.
   app.use("/api/*", rateLimit((env) => env.API_RATE_LIMITER));
+  app.use("/api/*", validateUnsafeRequestOrigin);
   // C1: verify the Cloudflare Access assertion on every API request.
   app.use("/api/*", accessAuth);
 

@@ -13,6 +13,7 @@ import {
 
 describe("posts API routes", () => {
   const app = createApp();
+  const sameOrigin = "http://localhost";
 
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -21,14 +22,27 @@ describe("posts API routes", () => {
   async function api(
     path: string,
     init?: RequestInit,
+    options: { includeOrigin?: boolean } = {},
   ): Promise<Response> {
-    return app.fetch(new Request(`http://localhost${path}`, init), env);
+    const method = init?.method?.toUpperCase() ?? "GET";
+    const headers = new Headers(init?.headers);
+    if (
+      method !== "GET" &&
+      method !== "HEAD" &&
+      method !== "OPTIONS" &&
+      options.includeOrigin !== false &&
+      !headers.has("Origin") &&
+      !headers.has("Referer")
+    ) {
+      headers.set("Origin", sameOrigin);
+    }
+    return app.fetch(new Request(`http://localhost${path}`, { ...init, headers }), env);
   }
 
   it("POST /api/posts creates a draft", async () => {
     const response = await api("/api/posts", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Origin: sameOrigin },
       body: JSON.stringify({ content: "Draft from test" }),
     });
 
@@ -45,7 +59,7 @@ describe("posts API routes", () => {
 
     const response = await api(`/api/posts/${created.data.id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Origin: sameOrigin },
       body: JSON.stringify({ content: "Updated content" }),
     });
 
@@ -122,6 +136,60 @@ describe("posts API routes", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as { posts: unknown[] };
     expect(Array.isArray(body.posts)).toBe(true);
+  });
+
+  it("does not block OPTIONS with the unsafe-origin guard", async () => {
+    const response = await api("/api/posts", { method: "OPTIONS" });
+    expect(response.status).not.toBe(403);
+  });
+
+  it("rejects unsafe requests from a malicious Origin", async () => {
+    const created = await createPost(env.DB, {
+      content: "Reject malicious origin",
+      scheduled_at: new Date(Date.now() + 60_000).toISOString(),
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const response = await api(`/api/posts/${created.data.id}/cancel`, {
+      method: "POST",
+      headers: { Origin: "https://attacker.example" },
+    });
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "forbidden" });
+  });
+
+  it("rejects unsafe browser-facing requests without Origin or Referer", async () => {
+    const created = await createPost(env.DB, { content: "Reject missing origin" });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const response = await api(
+      `/api/posts/${created.data.id}`,
+      { method: "DELETE" },
+      { includeOrigin: false },
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "forbidden" });
+  });
+
+  it("allows same-origin unsafe requests using Referer when Origin is absent", async () => {
+    const created = await createPost(env.DB, { content: "Referer delete" });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const response = await api(
+      `/api/posts/${created.data.id}`,
+      {
+        method: "DELETE",
+        headers: { Referer: `${sameOrigin}/posts` },
+      },
+      { includeOrigin: false },
+    );
+
+    expect(response.status).toBe(204);
   });
 
   it("GET /api/posts includes latest publish error details", async () => {

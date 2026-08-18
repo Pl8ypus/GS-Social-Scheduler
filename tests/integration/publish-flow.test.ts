@@ -11,7 +11,7 @@ describe("create → schedule → mock publish flow", () => {
     const createResponse = await app.fetch(
       new Request("http://localhost/api/posts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Origin: "http://localhost" },
         body: JSON.stringify({
           content: "Integration flow post",
           link_url: "https://example.com/article",
