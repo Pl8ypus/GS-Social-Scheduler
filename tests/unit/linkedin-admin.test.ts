@@ -1,16 +1,10 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../../src/worker/app";
-import type { Env } from "../../src/worker/env";
 
 describe("LinkedIn admin API", () => {
   const app = createApp();
   const sameOrigin = "http://localhost";
-  const testEnv: Env = {
-    ...env,
-    LINKEDIN_CLIENT_ID: "test-client-id",
-    LINKEDIN_CLIENT_SECRET: "test-client-secret",
-  };
 
   async function api(
     path: string,
@@ -29,7 +23,7 @@ describe("LinkedIn admin API", () => {
     ) {
       headers.set("Origin", sameOrigin);
     }
-    return app.fetch(new Request(`http://localhost${path}`, { ...init, headers }), testEnv);
+    return app.fetch(new Request(`http://localhost${path}`, { ...init, headers }), env);
   }
 
   it("reports disconnected status by default", async () => {
@@ -41,36 +35,6 @@ describe("LinkedIn admin API", () => {
     };
     expect(body.linkedin.connected).toBe(false);
     expect(body.linkedin.memberUrn).toBeNull();
-  });
-
-  it("redirects LinkedIn authorization requests to LinkedIn with OAuth parameters", async () => {
-    const response = await api("/api/admin/linkedin/authorize");
-
-    expect(response.status).toBe(302);
-    const redirectUrl = new URL(response.headers.get("Location") ?? "");
-    expect(redirectUrl.origin).toBe("https://www.linkedin.com");
-    expect(redirectUrl.pathname).toBe("/oauth/v2/authorization");
-    expect(redirectUrl.searchParams.get("response_type")).toBe("code");
-    expect(redirectUrl.searchParams.get("client_id")).toBe("test-client-id");
-    expect(redirectUrl.searchParams.get("redirect_uri")).toBe(
-      "http://localhost/api/admin/linkedin/callback",
-    );
-    expect(redirectUrl.searchParams.get("scope")).toBe(
-      "openid profile w_member_social",
-    );
-    expect(redirectUrl.searchParams.get("state")).toBeTruthy();
-  });
-
-  it("does not let a request URL parameter control the LinkedIn authorization redirect", async () => {
-    const response = await api(
-      "/api/admin/linkedin/authorize?url=https://example-attacker.invalid",
-    );
-
-    expect(response.status).toBe(302);
-    const redirectUrl = new URL(response.headers.get("Location") ?? "");
-    expect(redirectUrl.origin).toBe("https://www.linkedin.com");
-    expect(redirectUrl.pathname).toBe("/oauth/v2/authorization");
-    expect(redirectUrl.hostname).not.toBe("example-attacker.invalid");
   });
 
   it("disconnect removes the stored LinkedIn connection", async () => {

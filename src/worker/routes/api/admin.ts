@@ -8,7 +8,6 @@ import {
 } from "../../services/linkedin-service";
 
 const admin = new Hono<{ Bindings: Env }>();
-const LINKEDIN_AUTHORIZATION_ORIGIN = "https://www.linkedin.com";
 
 admin.get("/linkedin/status", async (c) => {
   const status = await getLinkedInStatus(c.env.DB);
@@ -22,12 +21,7 @@ admin.get("/linkedin/authorize", async (c) => {
       c.env,
       c.req.url,
     );
-    const redirectUrl = new URL(url);
-    if (redirectUrl.origin !== LINKEDIN_AUTHORIZATION_ORIGIN) {
-      return c.json({ error: "Invalid LinkedIn authorization redirect" }, 500);
-    }
-
-    return c.redirect(redirectUrl.toString());
+    return c.redirect(url);
   } catch (error) {
     return c.json(
       { error: error instanceof Error ? error.message : "LinkedIn setup failed" },
